@@ -559,6 +559,7 @@ tools/check_ui.mjs     HTML/JS wiring, task buttons, no-external-request promise
 tools/check_desktop.mjs  the desktop bootstrap, staged app and the built .exe
 tools/make_models_json.mjs  regenerate web/models.json from the bundles on disk
 tools/make_downloads.mjs    pre-build downloads/<name>-<release>.zip
+tools/make_bundle.mjs       build the release archive sgm-<release>.zip (source + models + docs)
 tools/build_desktop.mjs     stage + package + zip the desktop app
 	ools/fix_check.py     trains on the error cases, then measures the fixes it reproduces
 tools/overfit_test.py  learns 8 scenes and regenerates them from the caption alone

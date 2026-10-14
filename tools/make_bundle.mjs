@@ -25,6 +25,7 @@ const SKIP_DIRS = new Set([
   'checkpoints_10m', 'checkpoints_100m', 'checkpoints_smoke',
 ]);
 const SKIP_EXT = /\.(pt|pyc|log\.csv)$/i;
+const SKIP_NAME = /(^|\/)(preview\.log|\.DS_Store)$/;      // runtime noise, not project files
 const KEEP_LOGS = /(^|\/)(logs|samples)\//;
 
 function walk(dir, files = [], base = root) {
@@ -35,8 +36,9 @@ function walk(dir, files = [], base = root) {
       walk(path, files, base);
     } else if (entry.isFile()) {
       const rel = relative(base, path).replace(/\\/g, '/');
+      if (SKIP_NAME.test(rel)) continue;
       if (SKIP_EXT.test(entry.name) && !KEEP_LOGS.test(rel)) continue;
-      if (/\.zip$/i.test(entry.name) && /^image-ai-/.test(entry.name)) continue;   // superseded bundles
+      if (/\.zip$/i.test(rel)) continue;      // never pack an archive into an archive
       files.push(rel);
     }
   }

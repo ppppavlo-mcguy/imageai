@@ -113,6 +113,7 @@ tools/fix_check.py                proves the "fix this i got an error" task is l
 tools/check_parity.py + parity_js.mjs   Python <-> JS parity (tokenizer, codec, tasks, generation)
 tools/make_models_json.mjs        regenerate web/models.json from the bundles on disk
 tools/make_downloads.mjs          pre-build downloads/<name>-<release>.zip
+tools/make_bundle.mjs             build the release archive sgm-<release>.zip
 ```
 
 `data/` is optional (the procedural corpus in `synth.py` works offline and already contains snake,
