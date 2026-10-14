@@ -1,0 +1,45 @@
+{
+  "name": "sgm-desktop",
+  "productName": "SGM",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SGM (Small Generative Model) desktop shell - the same local chat UI as the website",
+  "main": "main.cjs",
+  "author": "SGM",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "stage": "node ../tools/build_desktop.mjs --stage-only",
+    "pack": "node ../tools/build_desktop.mjs --platform=linux",
+    "dist": "node ../tools/build_desktop.mjs --platform=win32",
+    "installer": "electron-builder --win nsis portable --x64"
+  },
+  "devDependencies": {
+    "@electron/packager": "^20.3.0",
+    "electron": "^44.7.2"
+  },
+  "build": {
+    "appId": "dev.sgm.desktop",
+    "productName": "SGM",
+    "artifactName": "sgm-desktop-${version}-${arch}.${ext}",
+    "files": [
+      "main.cjs",
+      "package.json",
+      "web/**",
+      "web_model*/**",
+      "models/**",
+      "VERSION"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ]
+    }
+  }
+}

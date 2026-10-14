@@ -20,6 +20,10 @@ PRESETS = {
     "tiny":  dict(embed_size=128, num_heads=4, num_layers=4, context_length=1024, expansion=4),
     "small": dict(embed_size=192, num_heads=6, num_layers=6, context_length=2048, expansion=4),
     "base":  dict(embed_size=256, num_heads=8, num_layers=8, context_length=2048, expansion=4),
+    # The sizes the UI offers as SGM-10M / SGM-100M (~9M and ~89M parameters at a 4992 token
+    # vocabulary). They are real CPU runs, not demos: see the sizing table in README section 3.
+    "10m":   dict(embed_size=320, num_heads=5, num_layers=6,  context_length=2048, expansion=4),
+    "100m":  dict(embed_size=768, num_heads=12, num_layers=12, context_length=2048, expansion=4),
 }
 
 

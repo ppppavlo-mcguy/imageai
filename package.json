@@ -1,13 +1,28 @@
 {
-  "name": "local-image-ai",
+  "name": "sgm",
   "version": "1.0.0",
   "private": true,
-  "description": "CPU-trained local image/text/code model with a pure JS/HTML/CSS inference app",
+  "description": "SGM (Small Generative Model) - a CPU-trained image/text/code model with a pure JS/HTML/CSS inference app",
   "type": "module",
   "engines": { "node": ">=18" },
   "scripts": {
     "start": "node web/server.js",
-    "cli": "node web/cli.mjs --model web_model --task image --prompt \"generate the image of a white car\"",
-    "parity": "python tools/check_parity.py checkpoints/tokenizer.json web_model"
+    "cli": "node web/cli.mjs --list",
+    "generate": "node web/cli.mjs --model web_model --task image --prompt \"generate the image of a white car\"",
+    "models": "node tools/make_models_json.mjs",
+    "downloads": "node tools/make_downloads.mjs",
+    "desktop": "node tools/build_desktop.mjs --platform=win32",
+    "desktop:stage": "node tools/build_desktop.mjs --stage-only",
+    "parity": "python tools/check_parity.py web_model/tokenizer.json web_model",
+    "test": "npm run test:ui && npm run test:http && npm run test:tasks && npm run test:web && npm run test:store && npm run test:gallery && npm run test:zip && npm run test:models && npm run test:desktop",
+    "test:ui": "node tools/check_ui.mjs",
+    "test:http": "node tools/check_http.mjs",
+    "test:web": "node tools/check_web_tasks.mjs",
+    "test:tasks": "python tools/check_tasks.py --mix multi",
+    "test:store": "node tools/check_store.mjs",
+    "test:gallery": "node tools/check_gallery.mjs",
+    "test:zip": "node tools/check_zip.mjs",
+    "test:models": "node tools/check_models.mjs",
+    "test:desktop": "node tools/check_desktop.mjs"
   }
 }

@@ -59,6 +59,9 @@ code { background: var(--panel2); padding: 1px 5px; border-radius: 5px; font-siz
 .sideList button:hover { background: var(--panel); }
 .sideList button.active { background: var(--panel2); border-color: var(--line2); }
 .sideList button.active span { color: var(--accent); }
+/* a tool the loaded model was not trained for stays clickable, but reads as unavailable */
+.sideList button.unsupported { opacity: .5; }
+.sideList button.unsupported:hover { opacity: .78; }
 
 .sideBottom { margin-top: auto; display: flex; flex-direction: column; gap: 8px; }
 .modelCard { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 9px; }
@@ -181,6 +184,55 @@ textarea#prompt { flex: 1; resize: none; max-height: 180px; background: transpar
 .limits { margin: 6px 2px 0; }
 .dropHint { margin-top: 7px; padding: 9px; text-align: center; color: var(--accent2);
   border: 1px dashed var(--line2); border-radius: 12px; font-size: 13px; }
+
+/* ------------------------------------------------------------- gallery + downloads */
+.galleryBtn { justify-content: flex-start; }
+.galleryBtn .badge { margin-left: auto; background: var(--panel); border: 1px solid var(--line2);
+  border-radius: 99px; padding: 0 7px; font-size: 11px; font-weight: 600; color: var(--muted); }
+.galleryBtn .badge.live { color: var(--accent2); border-color: #6ee7a844; }
+.field select { width: 100%; background: var(--bg); color: var(--fg); border: 1px solid var(--line);
+  border-radius: 8px; padding: 6px 8px; font: inherit; font-size: 12.5px; cursor: pointer; }
+.modelNote { margin: 0 0 7px; }
+button.ghost.tiny.danger, button.ghost.danger, .danger { color: var(--err); border-color: #f8717155; }
+
+.modal { position: fixed; inset: 0; z-index: 20; padding: 22px; display: grid; place-items: center;
+  background: rgba(0, 0, 0, .5); backdrop-filter: blur(2px); }
+.modalCard { width: min(1000px, 100%); max-height: 88vh; display: flex; flex-direction: column;
+  background: var(--panel); border: 1px solid var(--line2); border-radius: 16px; box-shadow: var(--shadow); }
+.modalHead { display: flex; align-items: center; gap: 10px; padding: 11px 14px;
+  border-bottom: 1px solid var(--line); }
+.modalHead .spacer { flex: 1; }
+.tabs { display: flex; gap: 3px; padding: 2px; background: var(--bg2);
+  border: 1px solid var(--line); border-radius: 9px; }
+.tabs button { background: transparent; border: 0; color: var(--muted); font: inherit; font-size: 12px;
+  padding: 4px 11px; border-radius: 7px; cursor: pointer; }
+.tabs button.active { background: var(--panel2); color: var(--fg); }
+.galleryGrid { padding: 14px; overflow-y: auto; display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.galleryGrid .empty { grid-column: 1 / -1; color: var(--muted); font-size: 13px; }
+.tile { display: flex; flex-direction: column; gap: 7px; padding: 9px; background: var(--bg2);
+  border: 1px solid var(--line); border-radius: 12px; }
+.tile .thumb { height: 124px; display: grid; place-items: center; overflow: hidden;
+  background: var(--code-bg); border: 1px solid var(--line); border-radius: 9px; }
+.tile .thumb img { max-width: 100%; max-height: 124px; }
+.tile .thumb pre { margin: 0; padding: 6px; font: 7.5px/1.05 ui-monospace, Menlo, Consolas, monospace;
+  white-space: pre; overflow: hidden; }
+.tile .thumb .ext { font: 600 15px/1 ui-monospace, Menlo, Consolas, monospace; color: var(--accent); }
+.tile .tileName { font-size: 12px; font-weight: 600; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+.tile .tileRow { display: flex; gap: 6px; align-items: center; }
+.tile .tileRow a, .tile .tileRow button { background: var(--panel2); border: 1px solid var(--line2);
+  color: var(--fg); border-radius: 8px; padding: 3px 9px; font: inherit; font-size: 11.5px;
+  cursor: pointer; text-decoration: none; }
+.tile .tileRow a:hover, .tile .tileRow button:hover { border-color: var(--accent); }
+.dlBody { padding: 14px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.dlRow { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--bg2);
+  border: 1px solid var(--line); border-radius: 12px; }
+.dlRow .spacer { flex: 1; }
+.dlRow a.button { background: var(--accent2); border: 0; color: #06210f; border-radius: 9px;
+  padding: 6px 12px; font-size: 12.5px; font-weight: 600; text-decoration: none; cursor: pointer; }
+.dlRow a.button.secondary { background: var(--panel2); color: var(--fg); border: 1px solid var(--line2);
+  font-weight: 500; }
 
 @media (max-width: 820px) {
   #app { grid-template-columns: 1fr; }

@@ -5,3 +5,11 @@ __pycache__/
 .cache/
 node_modules/
 .venv/
+
+# build output: model/app zips are regenerated with tools/make_downloads.mjs and
+# tools/build_desktop.mjs (they are large, and downloads/ is served by web/server.js)
+downloads/
+desktop/dist/
+desktop/build/
+
+logs/preview.log

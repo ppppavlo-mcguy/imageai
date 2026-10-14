@@ -136,7 +136,12 @@ def dequant_np(buf, m, np):
 def main():
     ap = argparse.ArgumentParser(description="export a checkpoint as an int8 browser bundle")
     ap.add_argument("checkpoint", nargs="?", default="checkpoints/latest.pt")
-    ap.add_argument("-o", "--output", default="web_model")
+    ap.add_argument("-o", "--output", default=None,
+                    help="bundle folder (default: web_model, or models/<name> when --name is given)")
+    ap.add_argument("--name", default=None,
+                    help="name this SGM bundle, e.g. sgm-10m -> models/sgm-10m; the UI picks it up "
+                         "as SGM-10M once web/models.json is refreshed "
+                         "(node tools/make_models_json.mjs)")
     ap.add_argument("--tokenizer", default="checkpoints/tokenizer.json")
     ap.add_argument("--bits", type=int, default=8, choices=[8, 4],
                     help="8 = per-tensor int8 (1.0 B/param), 4 = group-scaled int4 (~0.53 B/param)")
@@ -151,6 +156,8 @@ def main():
                          "the browser - ~12%% smaller with bit-identical weights)")
     ap.add_argument("--verify", action="store_true", help="reload the export and check the maths")
     a = ap.parse_args()
+    if a.output is None:
+        a.output = f"models/{a.name}" if a.name else "web_model"
     src = Path(a.checkpoint)
     out = Path(a.output)
     if not src.exists():
@@ -245,7 +252,8 @@ def main():
         print(f"gzip: {meta['weight_file_gz']} = {gz/1048576:.2f} MiB "
               f"({100 * (1 - gz / max(1, offset)):.0f}% smaller, decompressed in the browser)")
     print(f"Parameters: {params:,}")
-    print(f"Run: node web/server.js   (then open http://localhost:3000 and pick the {out} folder)")
+    print(f"Run: node web/server.js   (then open http://localhost:3000 and pick \"{out}\" in the model box)")
+    print(f"Next: node tools/make_models_json.mjs   (adds {out} to the model picker)")
 
     if a.verify:
         import numpy as np

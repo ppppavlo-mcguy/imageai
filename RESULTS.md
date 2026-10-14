@@ -190,3 +190,72 @@ a format the model has to guess at. The two cases that did not reproduce greedil
 fix differs by a single token from another case (`=` vs `===`, `colour` vs `color`) — expected for a
 1M-parameter model at 400 steps, and the reason the check's thresholds are 98% teacher-forced /
 75% greedy rather than 100%.
+
+## SGM pass 3: model picker, gallery, downloads, desktop app, named chats
+
+Renamed to **SGM (Small Generative Model)**, and the interface grew the four things that were asked
+for. Nothing about the model runtime changed, so the training numbers above still describe the
+shipped bundles.
+
+### What changed
+
+* The result preview card became a **Gallery**: every file a chat created (`sgm-1-image.png`,
+  `sgm-2-code.html`, `sgm-3-ascii.txt`, …), each downloadable, all of them together as a `.zip`
+  built in the tab by `web/zip.js`; uploads live on a second tab.
+* **Model picking with lazy loading**: `web/models.json` + `GET /api/models` list `SGM-1M`,
+  `SGM-3M-code`, `SGM-1M-int4` and (planned) `SGM-10M` / `SGM-100M`. The bundle is fetched only when
+  the first message of a chat is sent, and tools the loaded model was never trained for are greyed
+  out. `src/model.py` gained `--preset 10m` / `--preset 100m` with `train_10m.cmd`,
+  `export_10m.cmd`, `train_100m.cmd`, `export_100m.cmd`.
+* **Downloads**: every exported model as `sgm-<size>-<release>.zip` (`GET /api/download/model/<id>`,
+  cached in `downloads/`) and the desktop app (`GET /api/download/app`). `VERSION` = `v1` is the tag
+  in every artifact name from now on.
+* **Desktop app** (`desktop/`, Electron): `main.cjs` starts `web/server.js` on a loopback port and
+  loads it, so the window and the website are the same UI. `node tools/build_desktop.mjs
+  --platform=win32` stages a self-contained app folder, packages it and zips it into `downloads/`.
+* **Chats are named after the first prompt** (`titleForPrompt`), falling back to the first attached
+  file, then "New chat".
+
+### Verification (all of these pass on this build)
+
+```
+node tools/check_ui.mjs           UI OK          56 ids, 10 tool buttons, no CDN, same-origin fetches only
+node tools/check_http.mjs         HTTP OK        21 routes + a downloaded zip that generates identically
+node tools/check_web_tasks.mjs    WEB TASKS OK   11 task paths x 3 bundles + 3 guards each (36 checks)
+node tools/check_gallery.mjs      GALLERY OK     18 checks (names, extensions, bytes, zip entries)
+node tools/check_zip.mjs          ZIP OK         10 checks, archive read back by Python's zipfile
+node tools/check_models.mjs       MODELS OK      18 checks (SGM-1M naming, manifest/discovery merge)
+node tools/check_store.mjs        STORE OK       20 checks (+ 6 chat-title checks)
+node tools/check_desktop.mjs      DESKTOP OK     14 checks incl. SGM.exe is a real x86-64 PE file
+python tools/check_tasks.py --mix multi|code|image|all    TASKS OK x4, 10 kinds
+python tools/check_parity.py web_model/tokenizer.json web_model
+                                  PARITY OK      9 formats, greedy + forward, |dlogit| 0.00001
+```
+
+Measured in this pass:
+
+```
+SGM-1M (web_model)          1,069,920 params   1.02 MiB int8 -> 0.88 MiB zip, loads in ~58 ms
+SGM-3M-code                 3,271,520 params   3.12 MiB int8 -> 2.77 MiB zip
+SGM-1M-int4                 0.54 MiB int4      -> 0.35 MiB zip
+sgm-desktop-v1.zip          161.4 MiB          SGM.exe = PE32+ (GUI) x86-64, 234 MiB electron app
+model zip round-trip        the downloaded weights generate the same 65 tokens as the local bundle
+```
+
+### Honest caveats
+
+* **SGM-10M and SGM-100M are wired up but not trained here.** The presets, the training scripts, the
+  export path (`export_web.py --name sgm-10m`) and the picker entries exist; the picker shows them as
+  *not exported yet* until a real run produces the bundle. Training them is measured in hours to days
+  on this class of CPU (section 3 of the README has the sizing table), not something this pass could
+  do.
+* **No browser or display in this environment**, so the interactive click-through (open the gallery,
+  add a 13th file and watch the oldest vanish, wait out 24 h, the `＋` picker, drag-and-drop, the
+  theme toggle) is not machine-tested; the rules behind them are unit-tested and the DOM wiring is
+  checked statically (`tools/check_ui.mjs`). The desktop app is verified up to, but not including, an
+  Electron window: the bootstrap, the staged layout and the built `SGM.exe` are checked
+  (`tools/check_desktop.mjs`), which is why the last step there is *starting it on Windows*.
+* The 161 MiB desktop zip is **not** committed (git-ignored, like every other build artifact);
+  `node tools/build_desktop.mjs` recreates it, and `downloads/` is what the server offers.
+* The shipped bundles still predate the `fix` task (`SGM-1M`, `SGM-3M-code`) as described above, and
+  the pure-code run is still the 16-minute one.

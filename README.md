@@ -1,12 +1,25 @@
-# Local image / text / code AI — CPU-trained, JS-served
+# SGM — Small Generative Model (CPU-trained, JS-served)
 
 A small multimodal model you can train on a Windows PC with no GPU, then run **entirely in the
 browser** as plain HTML + CSS + JS (or from Node). One transformer, one vocabulary, five jobs:
 
-The UI is a **chat app** (`web/`): a tool rail on the left with a result preview card on top, the
-conversation on the right, and the answer for each turn as an image, a code card with *Copy* and
-*Preview as page*, or ASCII art. Dark and light themes, uploads with **＋**, and everything —
-chats, uploads, model — stays in the browser tab (no external requests).
+The UI is a **chat app** (`web/`): a model picker and a tool rail on the left, the conversation on
+the right, and the answer for each turn as an image, a code card with *Copy* and *Preview as page*,
+or ASCII art. Dark and light themes, uploads with **＋**, and everything — chats, uploads, model —
+stays in the browser tab (no external requests).
+
+* **Gallery** (`Gallery` button): every file a chat created — PNGs, code, ASCII art — in one grid,
+  each downloadable on its own or all together as a `.zip` (zipped in the tab by `web/zip.js`).
+* **Model picker**: `web/models.json` plus what the bundled server finds on disk, so `SGM-1M`,
+  `SGM-3M-code`, `SGM-1M-int4`, `SGM-10M` … are all selectable. A bundle is only loaded **when you
+  send the first message** (or press *Load now*), and the picker disables the tools a model was
+  never trained for instead of silently producing noise.
+* **Downloads** (`⬇` in the header, `/api/downloads`): every exported model as a versioned `.zip`
+  (`sgm-1m-v1.zip`) and the desktop build (`sgm-desktop-v1.zip`, a Windows `.exe`).
+* **Desktop app** (`desktop/`): the same UI in an Electron window, packageable to a real
+  `SGM.exe` — see section 10.
+
+Chats are named after the first thing you asked, not "New chat".
 
 | job | example prompt | output |
 |---|---|---|
@@ -291,9 +304,9 @@ generation ids, and transformer logits against the int8-dequantised PyTorch mode
 ## 7. Inference
 
 **Browser (the app you deploy).** `node web/server.js` → <http://localhost:3000>. The page is a chat
-UI: the left rail holds the tool list (*Auto*, image, code, **fix an error**, ASCII → website,
-describe, …) with a **result preview card** on top that shows the last generated image or ascii art
-(hidden while the chat has none), and the conversation is on the right with the composer at the
+UI: the left rail holds the **model picker** (the bundle loads on your first message), the tool list
+(*Auto*, image, code, **fix an error**, ASCII → website, describe, …) and the **Gallery** button that
+opens every file the chat created, while the conversation is on the right with the composer at the
 bottom. **＋** or drag-and-drop attaches files — up to **12 per chat**, **4 MB each**, **32 MB per
 chat** including message text; when a limit is hit the **oldest file is deleted first**. A chat with
 **24 h of inactivity is cleared** (on load, and every minute while the page is open), and `☰` lists
@@ -303,10 +316,11 @@ into a website” → ascii→code, otherwise an image. Messages keep their tool
 *Preview as page* (sandboxed iframe), *Download PNG*.
 
 Nothing leaves the tab: no CDN, no web fonts, no analytics, no API, no WebSocket. `web/engine.js`
-only fetches model files from the same folder the page was served from, so Render's free tier needs
-nothing but static hosting. Chats and uploads live in IndexedDB (`web/store.js`), not on the server.
-The `model folder` box switches bundles, and `model.json` records which `tasks` a checkpoint was
-trained for, shown as a badge next to the title. The page fetches
+only fetches model files from the same folder the page was served from (a model download is a plain
+`GET` to your own server), so Render's free tier needs nothing but static hosting. Chats and uploads
+live in IndexedDB (`web/store.js`), not on the server. The model picker switches bundles, and
+`model.json` records which `tasks` a checkpoint was trained for: it shows as a badge next to the
+title, and tools the model never learned are greyed out. The page fetches
 `model.json` + `weights.int8.bin` + `tokenizer.json`, dequantises once (~40 ms for 1M params) and
 runs the transformer in a Web Worker with a KV cache. Nothing is uploaded; the model runs on the
 visitor's machine, which is why a free host only has to serve static files. The UI lets you
@@ -357,11 +371,19 @@ limits. Preview and production both serve the same files, so a redeploy is just 
 
 ## 8. Verifying the build (no browser needed)
 
-Three checks ship with the project; all three pass on this codebase:
+`npm test` runs the JavaScript ones; the list below is the whole set, and all of them pass on this
+codebase:
 
 ```
+node tools/check_ui.mjs            # markup/JS wiring, task buttons, "no external requests" promises
+node tools/check_http.mjs          # the page, /api/models, /api/downloads, a model zip that loads
+node tools/check_web_tasks.mjs     # all 11 task paths x every bundle, through web/tasks.js
+node tools/check_gallery.mjs       # transcript -> created files (names, extensions, byte counts)
+node tools/check_zip.mjs           # zip writer round-trip (also read back by Python's zipfile)
+node tools/check_models.mjs        # bundle naming + manifest/discovery merge
+node tools/check_desktop.mjs       # desktop bootstrap, staged app, the built .exe
 python tools/check_tasks.py --mix multi --context 1024                   # every task format builds, and fits
-node tools/check_store.mjs                                              # 32 MB / 12 file / FIFO / 24 h rules
+node tools/check_store.mjs                                              # 32 MB / 12 file / FIFO / 24 h rules + chat titles
 python tools/fix_check.py                                              # is "fix this i got an error" learnable?
 python tools/demo_check.py checkpoints_demo2/latest.pt                  # does the shipped demo really work?
 python tools/overfit_test.py                                            # is "caption -> image" actually right?
@@ -394,6 +416,23 @@ node web/cli.mjs --model web_model --task image --prompt "a white car" --out sam
   loads a bundle over HTTP with the gzip transit and asserts the browser path is bit-identical to
   reading the files from disk.
 
+* `tools/check_web_tasks.mjs` is the end-to-end one: it runs every task the UI can route to
+  (including `fix` with and without an error message, and `ascii2code` from pasted art) through the
+  real `web/tasks.js` with each shipped bundle, checks the answer shape, and checks that the tasks
+  which need an image - or a snippet - refuse to invent one.
+* `tools/check_http.mjs` starts the server on a free port and walks the routes the browser uses
+  (`/`, `/web/*`, `/api/models`, `/api/downloads`, `/api/download/model/<id>`), then unzips the
+  downloaded model in memory, generates with it and asserts the tokens match the bundle on disk -
+  a download that cannot reproduce the local model is a broken download.
+* `tools/check_gallery.mjs` / `check_zip.mjs` / `check_models.mjs` pin the three new pieces of pure
+  logic: gallery file names and counts, the zip format (round-tripped plus a Python `zipfile`
+  cross-check), and bundle naming/merging (1.07M params -> `SGM-1M`, a planned bundle that appears
+  on disk becomes selectable).
+* `tools/check_ui.mjs` and `tools/check_desktop.mjs` cover the parts a browser would otherwise have
+  to prove: every `$('id')` in `app.js` exists, every tool button has a task entry, the page loads
+  nothing from a CDN, only same-origin fetches are used, the desktop bootstrap resolves its root in
+  both layouts, and `SGM.exe` is a real x86-64 PE executable when a build exists.
+
 If you change `src/tasks.py` or `src/imagecodec.py`, run both - the JS side mirrors them by hand in
 `web/tasks.js` and `web/engine.js`.
 
@@ -417,7 +456,69 @@ If you change `src/tasks.py` or `src/imagecodec.py`, run both - the JS side mirr
 * **Windows console mojibake** → the progress bar is plain ASCII on purpose; run inside Windows
   Terminal for the best view.
 
-## 10. Files
+## 10. The app: models, gallery, downloads, desktop
+
+### Model bundles
+
+Every folder with a `model.json` next to `web/` is a bundle: `web_model*` or `models/<name>/`
+(`export_web.py --name sgm-10m` writes the latter). `node tools/make_models_json.mjs` regenerates
+`web/models.json`, which is the checked-in list the picker reads, and `/api/models` additionally
+scans the disk so a fresh export shows up without editing anything:
+
+```
+python src/export_web.py checkpoints_10m/latest.pt --name sgm-10m --verify
+node tools/make_models_json.mjs        # SGM-10M appears in the picker
+```
+
+The names are derived from the parameter count (1.07M → `SGM-1M`, ~89M → `SGM-100M`) and the
+quantisation (`SGM-1M-int4`). Presets for those sizes are in `src/model.py` (`--preset 10m`,
+`--preset 100m`) with ready-made scripts: `train_10m.cmd` / `export_10m.cmd`,
+`train_100m.cmd` / `export_100m.cmd`. They are real runs, not demos — size them with the table in
+section 3. A bundle declared but not built yet still shows in the picker, greyed out and marked
+"not exported yet", so the option is visible without pretending it works.
+
+### Downloads
+
+`node tools/make_downloads.mjs` pre-builds `downloads/<name>-<release>.zip` (release from the
+`VERSION` file, currently `v1`); `web/server.js` builds and caches the same zips on demand:
+
+```
+GET /api/models                     available + planned bundles
+GET /api/downloads                  everything you can download, with file names
+GET /api/download/model/sgm-1m      the model bundle as a .zip
+GET /api/download/app               the desktop build
+```
+
+Bump `VERSION` to `v2` and the same commands publish `sgm-1m-v2.zip` etc. — every artifact name
+carries the release from now on. A model zip holds `model.json`, `tokenizer.json`,
+`imagecodec.json`, the weights and a `README.txt`, so the downloaded folder can be dropped next to
+`web/` and picked up by the picker unchanged (the HTTP check loads the zip's weights and asserts it
+generates identically to the local bundle).
+
+### Gallery
+
+`web/gallery.js` turns the transcript into files: `sgm-1-image.png`, `sgm-2-code.html`,
+`sgm-3-ascii.txt`, … numbered in creation order, plus the chat's uploads on a second tab.
+*Download all (.zip)* packs them with `web/zip.js` (deflate via `CompressionStream`, standard zip
+readable by Explorer/Finder/unzip — `tools/check_zip.mjs` round-trips it through Python's
+`zipfile`). Nothing is added to storage: the gallery is a view over the chat that is already saved.
+
+### Desktop app
+
+```
+cd desktop && npm install       # once (~120 MB of Electron)
+npm start                       # the same UI in a window, serving web/ on a loopback port
+
+node tools/build_desktop.mjs --platform=win32      (Windows: desktop\build.cmd)
+```
+
+The build stages a self-contained folder (`main.cjs`, `boot.cjs`, `web/`, the bundles, `VERSION`),
+packages it into `desktop/dist/SGM-win32-x64/SGM.exe` and zips that to
+`downloads/sgm-desktop-v1.zip`, which the web UI offers under **Downloads**. `desktop/main.cjs` is
+thin on purpose: it starts `web/server.js` and loads the URL, so there is one UI, not two. Details in
+`desktop/README.md`.
+
+## 11. Files
 
 ```
 src/vocab.py         token-space layout (shared with the JS runtime)
@@ -433,21 +534,37 @@ src/generate.py      sampling + task glue (also the Python CLI)
 src/export_web.py    int8 export bundle
 web/engine.js        JS transformer + tokenizer + image codec (no dependencies)
 web/tasks.js         task glue (combination tasks, fix task, image->ascii) shared with the CLI
-web/worker.js        Web Worker wrapper
-web/index.html       chat UI shell (tool rail, result preview, composer)
+web/worker.js        Web Worker wrapper (owns the loaded bundle, reports which model answered)
+web/index.html       chat UI shell (model picker, tool rail, gallery + downloads modals, composer)
 web/style.css        chat UI styling + dark/light themes
-web/app.js           chat UI logic: routing, uploads, limits, themes, rendering
-web/store.js         IndexedDB chats/uploads: quota, FIFO eviction, 24 h expiry
+web/app.js           chat UI logic: routing, uploads, limits, themes, gallery, rendering
+web/store.js         IndexedDB chats/uploads: quota, FIFO eviction, 24 h expiry, chat titles
+web/gallery.js       transcript -> created files (names, extensions, byte counts)
+web/models.js        model registry helpers (names from parameter counts, manifest merge)
+web/models.json      the checked-in bundle list the picker reads
+web/zip.js           dependency-free zip writer/reader (gallery, downloads, build tools)
 web/png.js           PNG encode/decode + bilinear upscale
-web/cli.mjs          Node command line
-web/server.js        tiny static server (Render/HelioHost friendly)
+web/cli.mjs          Node command line (--list shows the bundles)
+web/server.js        static server + /api/models + /api/downloads (Render/HelioHost friendly)
+desktop/main.cjs     Electron window + menu (thin: it starts web/server.js)
+desktop/boot.cjs     root resolution + local server, Electron-free so it can be tested
+VERSION              the release tag in every artifact name (v1, v2, ...)
 tools/check_parity.py, tools/parity_js.mjs   Python<->JS parity check
 tools/check_tasks.py   every task format builds a valid, context-sized sequence
-tools/check_store.mjs  the chat storage rules (32 MB, 12 files, FIFO, 24 h)
-tools/fix_check.py     trains on the error cases, then measures the fixes it reproduces
+	ools/check_web_tasks.mjs  all 11 task paths through the real runtime, per bundle
+tools/check_store.mjs  the chat storage + chat-title rules
+tools/check_gallery.mjs, tools/check_zip.mjs, tools/check_models.mjs  gallery, zip, model picker
+tools/check_http.mjs   the page, the APIs and the versioned downloads (loads a downloaded zip)
+tools/check_ui.mjs     HTML/JS wiring, task buttons, no-external-request promises
+tools/check_desktop.mjs  the desktop bootstrap, staged app and the built .exe
+tools/make_models_json.mjs  regenerate web/models.json from the bundles on disk
+tools/make_downloads.mjs    pre-build downloads/<name>-<release>.zip
+tools/build_desktop.mjs     stage + package + zip the desktop app
+	ools/fix_check.py     trains on the error cases, then measures the fixes it reproduces
 tools/overfit_test.py  learns 8 scenes and regenerates them from the caption alone
 data/seed_code/      23 hand-written HTML/CSS/JS/Python samples with instructions
 FILES.md             what to copy for training vs inference + the changed-file log
 setup.cmd train.cmd train_code.cmd train_ui.cmd export.cmd serve.cmd  Windows helpers
-package.json         npm start = web/server.js (Render/HelioHost)
+train_10m.cmd export_10m.cmd train_100m.cmd export_100m.cmd          SGM-10M / SGM-100M
+package.json         npm start = web/server.js, npm test = every check
 ```

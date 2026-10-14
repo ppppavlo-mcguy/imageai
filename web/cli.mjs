@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-/* Node CLI for an exported int8 model - handy for testing before you deploy.
+/* Node CLI for SGM (Small Generative Model) - handy for testing before you deploy.
+     node web/cli.mjs --list
      node web/cli.mjs --model web_model --task image --prompt "a white car" --out car.png
      node web/cli.mjs --model web_model --task ascii --image photo.png
      node web/cli.mjs --model web_model --task code --prompt "write html for a blue card"
@@ -16,6 +17,15 @@ const arg = (name, dflt = null) => {
   const i = argv.indexOf(`--${name}`);
   return i >= 0 ? argv[i + 1] : dflt;
 };
+if (argv.includes('--list')) {                 // same bundles the model picker shows
+  const manifest = JSON.parse(readFileSync(new URL('./models.json', import.meta.url), 'utf8'));
+  for (const m of manifest.models) {
+    const ready = !m.planned && (m.params || 0) > 0;
+    console.log(`${ready ? 'ready  ' : 'planned'}  ${String(m.name).padEnd(14)} ${String(m.dir).padEnd(18)} ` +
+      `${((m.bytes || 0) / 1048576).toFixed(2).padStart(7)} MiB  ${(m.tasks || []).join(', ')}`);
+  }
+  process.exit(0);
+}
 const model = arg('model', 'web_model');
 const task = arg('task', 'image');
 const prompt = arg('prompt', 'generate the image of a white car');

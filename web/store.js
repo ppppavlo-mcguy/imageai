@@ -10,6 +10,27 @@
  * The pure functions are exported so tools/check_store.mjs can test the rules without a browser.
  */
 
+export const DEFAULT_TITLE = 'New chat';
+
+/**
+ * Name a chat after the first thing it was asked, not "New chat".
+ * Falls back to the first attached file's name when the message was attachment-only.
+ */
+export function titleForPrompt(text = '', files = []) {
+  let t = String(text || '').replace(/\s+/g, ' ').trim();
+  t = t.replace(/^(please|hey|hi|hello|ok|okay|can you|could you|would you|i want you to|i'd like you to)\s+/i, '');
+  t = t.replace(/[\s,.;:!?]+$/, '');
+  if (!t) {
+    const first = (files || [])[0];
+    if (!first) return DEFAULT_TITLE;
+    return String(first).split('/').pop().slice(0, TITLE_MAX);
+  }
+  if (t.length <= TITLE_MAX) return t;
+  const cut = t.slice(0, TITLE_MAX);
+  const at = cut.lastIndexOf(' ');
+  return (at > TITLE_MAX * 0.5 ? cut.slice(0, at) : cut).trim() + '…';
+}
+
 export const LIMITS = {
   chatBytes: 32 * 1024 * 1024,   // 25-50 MB per chat, as requested
   fileCount: 12,                 // file amount limit (not size)
@@ -17,6 +38,8 @@ export const LIMITS = {
   ttlMs: 24 * 60 * 60 * 1000,    // clear a chat after 24 h of inactivity
   keepChats: 8,                  // how many chats the sidebar remembers
 };
+
+const TITLE_MAX = 44;         // a chat title is one short line
 
 /* ------------------------------------------------------------------ policy */
 
@@ -62,7 +85,7 @@ export function fmtBytes(n) {
 
 /* ------------------------------------------------------------- IndexedDB */
 
-const DB_NAME = 'imgcode-chat';
+const DB_NAME = 'sgm-chat';
 const DB_VERSION = 1;
 const CHATS = 'chats';
 const FILES = 'files';

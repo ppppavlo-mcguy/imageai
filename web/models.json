@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "release": "v1",
+  "default": "sgm-1m",
+  "models": [
+    {
+      "id": "sgm-1m",
+      "name": "SGM-1M",
+      "dir": "web_model",
+      "note": "image · caption · ascii · code · code_lm · text",
+      "params": 1069920,
+      "bytes": 1069920,
+      "bits": 8,
+      "tasks": [
+        "image",
+        "caption",
+        "ascii",
+        "code",
+        "code_lm",
+        "text"
+      ],
+      "quantized": "symmetric-per-tensor-int8"
+    },
+    {
+      "id": "sgm-3m-code",
+      "name": "SGM-3M-code",
+      "dir": "web_model_code",
+      "note": "ascii · code · code_lm · text · ascii2code",
+      "params": 3271520,
+      "bytes": 3271520,
+      "bits": 8,
+      "tasks": [
+        "ascii",
+        "code",
+        "code_lm",
+        "text",
+        "ascii2code"
+      ],
+      "quantized": "symmetric-per-tensor-int8"
+    },
+    {
+      "id": "sgm-1m-int4",
+      "name": "SGM-1M-int4",
+      "dir": "web_model_int4",
+      "note": "4-bit weights, half the download (size comparison)",
+      "params": 1069920,
+      "bytes": 568548,
+      "bits": 4,
+      "tasks": [],
+      "quantized": "symmetric-group64-int4-fp16scale"
+    },
+    {
+      "id": "sgm-10m",
+      "name": "SGM-10M",
+      "dir": "models/sgm-10m",
+      "planned": true,
+      "note": "not exported yet — train_10m.cmd, then export_web.py --name sgm-10m"
+    },
+    {
+      "id": "sgm-100m",
+      "name": "SGM-100M",
+      "dir": "models/sgm-100m",
+      "planned": true,
+      "note": "not exported yet — train_100m.cmd, then export_web.py --name sgm-100m"
+    }
+  ]
+}

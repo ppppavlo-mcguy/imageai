@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ImgCode · local image / code AI</title>
+<title>SGM · Small Generative Model, running in this tab</title>
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
@@ -13,19 +13,15 @@
   <aside id="rail">
     <div class="brand">
       <span class="logo">◈</span>
-      <span class="brandText">ImgCode<em>runs in this tab</em></span>
+      <span class="brandText">SGM<em>Small Generative Model</em></span>
     </div>
 
     <button id="newChat" class="newChat"><span>＋</span> New chat</button>
 
-    <!-- [IMG]: the last generated picture / ascii of this chat. Hidden when there is none. -->
-    <section id="previewCard" class="previewCard hidden">
-      <p class="sideLabel">last result <button id="previewHide" class="ghost tiny">hide</button></p>
-      <canvas id="previewCanvas" class="previewCanvas hidden" width="96" height="96"></canvas>
-      <pre id="previewAscii" class="previewAscii hidden"></pre>
-      <p class="tiny muted" id="previewMeta"></p>
-      <a id="previewDownload" class="ghost tiny hidden" download="generated.png">download PNG</a>
-    </section>
+    <!-- [GALLERY]: every file this chat created, in one place -->
+    <button id="galleryBtn" class="newChat galleryBtn" title="all files created in this chat">
+      <span>▣</span> Gallery <b class="badge" id="galleryCount">0</b>
+    </button>
 
     <!-- [TOOL]: one capability per button -->
     <nav id="capList" class="sideList">
@@ -46,17 +42,26 @@
       <div class="modelCard">
         <div class="modelHead">
           <span class="dot" id="dot"></span>
-          <span id="modelState">model not loaded</span>
+          <span id="modelState">no model loaded</span>
         </div>
-        <div class="modelMeta" id="modelInfo">int8 weights, runs in this tab</div>
+        <div class="modelMeta" id="modelInfo">the model loads by itself on your first message</div>
         <label class="field">
-          <span>model folder</span>
-          <input id="modelDir" value="web_model" spellcheck="false">
+          <span>model</span>
+          <select id="modelSelect"></select>
         </label>
         <div class="modelRow">
-          <button id="load" class="ghost">Load</button>
+          <button id="load" class="ghost">Load now</button>
           <span class="muted small" id="status">idle</span>
         </div>
+        <p class="tiny muted" id="modelNote"></p>
+        <details class="settings">
+          <summary>custom folder</summary>
+          <label class="field">
+            <span>model folder (relative to the project root)</span>
+            <input id="modelDir" value="web_model" spellcheck="false">
+          </label>
+          <button id="loadDir" class="ghost tiny">load this folder</button>
+        </details>
       </div>
 
       <details class="settings">
@@ -82,9 +87,12 @@
   <main id="chat">
     <header id="topbar">
       <span class="hash">#</span>
-      <span class="room" id="roomName">new chat</span>
+      <span class="room" id="roomName">New chat</span>
       <span class="pill" id="taskPill">auto</span>
       <span class="pill ghostPill" id="trainedPill" hidden></span>
+      <button id="clearBtn" class="ghost" title="remove all messages from this chat">Clear</button>
+      <button id="deleteBtn" class="ghost danger" title="delete this chat permanently">Delete</button>
+      <button id="dlBtn" class="iconBtn" title="download the models and the desktop app">⬇</button>
       <button id="chatsBtn" class="iconBtn" title="recent chats">☰</button>
       <button id="themeBtn" class="iconBtn" title="switch light/dark">◐</button>
     </header>
@@ -107,6 +115,37 @@
       <div id="drop" class="dropHint hidden">drop files to attach them</div>
     </footer>
   </main>
+
+  <!-- ============================================================== gallery -->
+  <div id="galleryModal" class="modal hidden">
+    <div class="modalCard">
+      <div class="modalHead">
+        <b>Gallery</b>
+        <div class="tabs">
+          <button data-tab="created" class="active">created</button>
+          <button data-tab="uploads">uploaded</button>
+        </div>
+        <span class="spacer"></span>
+        <span class="tiny muted" id="galleryMeta"></span>
+        <button id="galleryZip" class="ghost">Download all (.zip)</button>
+        <button id="galleryClose" class="ghost">close</button>
+      </div>
+      <div id="galleryGrid" class="galleryGrid"></div>
+    </div>
+  </div>
+
+  <!-- ============================================================ downloads -->
+  <div id="dlModal" class="modal hidden">
+    <div class="modalCard">
+      <div class="modalHead">
+        <b>Downloads</b>
+        <span class="spacer"></span>
+        <span class="tiny muted" id="dlRelease"></span>
+        <button id="dlClose" class="ghost">close</button>
+      </div>
+      <div id="dlBody" class="dlBody"></div>
+    </div>
+  </div>
 </div>
 <script type="module" src="./app.js"></script>
 </body>

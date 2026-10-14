@@ -3,7 +3,8 @@
 
      node tools/check_store.mjs
 */
-import { LIMITS, planEvictions, isExpired, chatBytes, fmtBytes, isTextFile } from '../web/store.js';
+import { LIMITS, planEvictions, isExpired, chatBytes, fmtBytes, isTextFile, titleForPrompt, DEFAULT_TITLE }
+  from '../web/store.js';
 
 let failures = 0;
 const check = (name, cond, detail = '') => {
@@ -55,6 +56,26 @@ const file = (name, size) => ({ id: name, name, size });
   check('23 h idle is kept', !isExpired({ updatedAt: now - 23 * 3600_000 }, now));
   check('25 h idle is cleared', isExpired({ updatedAt: now - 25 * 3600_000 }, now));
   check('missing chat counts as expired', isExpired(null, now));
+}
+
+// --- chats are named after the first prompt --------------------------------------------------
+{
+  check('a prompt becomes the chat name', titleForPrompt('a big white car on a blue background')
+    === 'a big white car on a blue background');
+  check('polite openers are dropped',
+    titleForPrompt('Please make a snake game') === 'make a snake game',
+    titleForPrompt('Please make a snake game'));
+  check('long prompts are cut on a word boundary',
+    titleForPrompt('write me a very long description of a small robot living inside a very old house by the sea')
+      .endsWith('…')
+      && titleForPrompt('write me a very long description of a small robot living inside a very old house by the sea')
+      .length <= 45);
+  check('newlines and runs of spaces collapse',
+    titleForPrompt('  fix this,\n\ni got an error:  NameError ') === 'fix this, i got an error: NameError');
+  check('an attachment-only message is named after the file',
+    titleForPrompt('', ['broken.js']) === 'broken.js');
+  check('nothing to name stays "New chat"', titleForPrompt('') === DEFAULT_TITLE
+    && titleForPrompt('   ', []) === DEFAULT_TITLE);
 }
 
 // --- attachment classification ---------------------------------------------------------------
