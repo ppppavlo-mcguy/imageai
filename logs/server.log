@@ -1,0 +1,2 @@
+serving /workspace/chats/4630f5cb15941d46f3c8ff77
+open http://localhost:3000/  (model folder default: web_model)

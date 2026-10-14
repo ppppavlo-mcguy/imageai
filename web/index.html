@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ImgCode · local image / code AI</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ============================================================ left rail -->
+  <aside id="rail">
+    <div class="brand">
+      <span class="logo">◈</span>
+      <span class="brandText">ImgCode<em>runs in this tab</em></span>
+    </div>
+
+    <button id="newChat" class="newChat"><span>＋</span> New chat</button>
+
+    <!-- [IMG]: the last generated picture / ascii of this chat. Hidden when there is none. -->
+    <section id="previewCard" class="previewCard hidden">
+      <p class="sideLabel">last result <button id="previewHide" class="ghost tiny">hide</button></p>
+      <canvas id="previewCanvas" class="previewCanvas hidden" width="96" height="96"></canvas>
+      <pre id="previewAscii" class="previewAscii hidden"></pre>
+      <p class="tiny muted" id="previewMeta"></p>
+      <a id="previewDownload" class="ghost tiny hidden" download="generated.png">download PNG</a>
+    </section>
+
+    <!-- [TOOL]: one capability per button -->
+    <nav id="capList" class="sideList">
+      <p class="sideLabel">tools</p>
+      <button data-task="auto" class="active"><span>✦</span> Auto<em>pick by prompt</em></button>
+      <button data-task="image"><span>▦</span> Image<em>text → picture</em></button>
+      <button data-task="code"><span>⌗</span> Code<em>html / css / js / py</em></button>
+      <button data-task="fix"><span>⚠</span> Fix an error<em>snippet + error → fix</em></button>
+      <button data-task="ascii2code"><span>⇥</span> ASCII → site<em>art → markup</em></button>
+      <button data-task="caption"><span>◍</span> Describe<em>picture → words</em></button>
+      <button data-task="img2code"><span>⇤</span> Image → site<em>picture → markup</em></button>
+      <button data-task="ascii"><span>≡</span> ASCII art<em>picture → text art</em></button>
+      <button data-task="code2img"><span>◨</span> Site → image<em>markup → preview</em></button>
+      <button data-task="text"><span>¶</span> Text<em>continuation</em></button>
+    </nav>
+
+    <div class="sideBottom">
+      <div class="modelCard">
+        <div class="modelHead">
+          <span class="dot" id="dot"></span>
+          <span id="modelState">model not loaded</span>
+        </div>
+        <div class="modelMeta" id="modelInfo">int8 weights, runs in this tab</div>
+        <label class="field">
+          <span>model folder</span>
+          <input id="modelDir" value="web_model" spellcheck="false">
+        </label>
+        <div class="modelRow">
+          <button id="load" class="ghost">Load</button>
+          <span class="muted small" id="status">idle</span>
+        </div>
+      </div>
+
+      <details class="settings">
+        <summary>sampling</summary>
+        <label class="field"><span>temperature <b id="tempV">0.70</b></span>
+          <input id="temp" type="range" min="0.1" max="1.5" step="0.05" value="0.7"></label>
+        <label class="field"><span>top-k <b id="topkV">64</b></span>
+          <input id="topk" type="range" min="0" max="256" step="1" value="64"></label>
+        <label class="field"><span>top-p <b id="topPV">0.95</b></span>
+          <input id="topP" type="range" min="0.1" max="1" step="0.01" value="0.95"></label>
+        <label class="field"><span>seed</span><input id="seed" type="number" value="1234"></label>
+      </details>
+
+      <div class="storage">
+        <div class="bar"><div id="usageBar"></div></div>
+        <p class="tiny muted" id="usageText">storage: – / 32 MB · 0/12 files</p>
+        <p class="tiny muted">Chats are deleted after 24 h idle. Oldest files are removed first.</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ================================================================= chat -->
+  <main id="chat">
+    <header id="topbar">
+      <span class="hash">#</span>
+      <span class="room" id="roomName">new chat</span>
+      <span class="pill" id="taskPill">auto</span>
+      <span class="pill ghostPill" id="trainedPill" hidden></span>
+      <button id="chatsBtn" class="iconBtn" title="recent chats">☰</button>
+      <button id="themeBtn" class="iconBtn" title="switch light/dark">◐</button>
+    </header>
+
+    <div id="messages" class="messages"></div>
+
+    <div id="chatList" class="chatList hidden"></div>
+    <div id="progressWrap" class="hidden"><div id="progress"></div></div>
+
+    <footer id="composer">
+      <div id="attachList" class="attachList"></div>
+      <div id="examples" class="examples"></div>
+      <div class="composerRow">
+        <button id="pick" class="iconBtn" title="attach files (＋)">＋</button>
+        <input id="files" type="file" multiple hidden>
+        <textarea id="prompt" rows="1" placeholder="Ask anything — “a big white car on a blue background”, “make a snake game”, attach a file and say “fix this i got an error”…"></textarea>
+        <button id="send" class="send" title="send (Enter)">↑</button>
+      </div>
+      <p class="tiny muted limits" id="limitsHint">up to 12 files per chat · 4 MB each · 32 MB per chat · everything stays in this tab (no external requests)</p>
+      <div id="drop" class="dropHint hidden">drop files to attach them</div>
+    </footer>
+  </main>
+</div>
+<script type="module" src="./app.js"></script>
+</body>
+</html>

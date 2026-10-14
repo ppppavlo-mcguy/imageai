@@ -1,0 +1,5 @@
+# CPU-only training stack (Windows: these PyPI wheels are CPU builds already)
+torch>=2.2
+numpy>=1.24
+pillow>=10.0
+datasets>=2.19        # HuggingFace datasets: image + code corpora

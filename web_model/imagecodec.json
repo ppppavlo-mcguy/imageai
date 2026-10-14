@@ -1,0 +1,14 @@
+{
+  "img_px": 32,
+  "patch": 4,
+  "sub": 2,
+  "grid": 8,
+  "detail": false,
+  "n1": 64,
+  "n2": 0,
+  "l1_levels": 15,
+  "l1_bits": 4,
+  "l2_min": -3,
+  "l2_max": 3,
+  "det_step": 15.3
+}

@@ -1,0 +1,18 @@
+# instruction: write css for a dark theme with an accent colour
+:root {
+  --bg: #14161a;
+  --fg: #e8ecf1;
+  --accent: #4c8dff;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, sans-serif;
+}
+a { color: var(--accent); }
+.card {
+  border: 1px solid #2b313a;
+  border-radius: 14px;
+  padding: 16px;
+}

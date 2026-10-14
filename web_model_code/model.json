@@ -1,0 +1,731 @@
+{
+  "format": "local-gpt-int8-v1",
+  "version": 1,
+  "tasks": [
+    "ascii",
+    "code",
+    "code_lm",
+    "text",
+    "ascii2code"
+  ],
+  "quantization": "symmetric-per-tensor-int8",
+  "bits": 8,
+  "group_size": 64,
+  "scale_dtype": "fp16",
+  "architecture": {
+    "vocab_size": 5074,
+    "embed_size": 160,
+    "num_heads": 4,
+    "num_layers": 6,
+    "context_length": 1024,
+    "dropout": 0.0,
+    "expansion": 4,
+    "tie_embeddings": true,
+    "rope_base": 10000.0,
+    "norm_eps": 1e-05,
+    "loss_chunk": 1024
+  },
+  "tied_embeddings": true,
+  "layout": {
+    "specials": [
+      "<pad>",
+      "<bos>",
+      "<eos>",
+      "<sep>",
+      "<img>",
+      "<cap>",
+      "<ascii>",
+      "<code>",
+      "<ask>"
+    ],
+    "n_text": 969,
+    "text_base": 9,
+    "l1": 4096,
+    "img1_base": 978,
+    "l2": 0,
+    "img2_base": 5074,
+    "detail": false,
+    "total": 5074
+  },
+  "codec": {
+    "img_px": 32,
+    "patch": 4,
+    "sub": 2,
+    "grid": 8,
+    "detail": false,
+    "n1": 64,
+    "n2": 0,
+    "l1_levels": 15,
+    "l1_bits": 4,
+    "l2_min": -3,
+    "l2_max": 3,
+    "det_step": 15.3
+  },
+  "parameter_count": 3271520,
+  "weight_file": "weights.int8.bin",
+  "weight_bytes": 3271520,
+  "checkpoint_step": 428,
+  "tensors": {
+    "token_embedding.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0018195180207725586,
+      "shape": [
+        5074,
+        160
+      ],
+      "length": 811840,
+      "offset": 0
+    },
+    "blocks.0.norm1.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.007829974955461156,
+      "shape": [
+        160
+      ],
+      "length": 160,
+      "offset": 811840
+    },
+    "blocks.0.attn.wq.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0010306643923436562,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 812000
+    },
+    "blocks.0.attn.wk.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0008788680232415987,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 837600
+    },
+    "blocks.0.attn.wv.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0006392940174876235,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 863200
+    },
+    "blocks.0.attn.wo.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0006920999781353267,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 888800
+    },
+    "blocks.0.norm2.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.008116927672558881,
+      "shape": [
+        160
+      ],
+      "length": 160,
+      "offset": 914400
+    },
+    "blocks.0.mlp.w1.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.000835145317663358,
+      "shape": [
+        640,
+        160
+      ],
+      "length": 102400,
+      "offset": 914560
+    },
+    "blocks.0.mlp.w2.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.000877832803200549,
+      "shape": [
+        160,
+        640
+      ],
+      "length": 102400,
+      "offset": 1016960
+    },
+    "blocks.0.mlp.w3.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0009873575112951084,
+      "shape": [
+        640,
+        160
+      ],
+      "length": 102400,
+      "offset": 1119360
+    },
+    "blocks.1.norm1.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.007826633340730442,
+      "shape": [
+        160
+      ],
+      "length": 160,
+      "offset": 1221760
+    },
+    "blocks.1.attn.wq.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0010140141633551891,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 1221920
+    },
+    "blocks.1.attn.wk.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0009653598187476631,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 1247520
+    },
+    "blocks.1.attn.wv.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0006438355863563657,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 1273120
+    },
+    "blocks.1.attn.wo.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0006833649643762843,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 1298720
+    },
+    "blocks.1.norm2.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.008020836537278543,
+      "shape": [
+        160
+      ],
+      "length": 160,
+      "offset": 1324320
+    },
+    "blocks.1.mlp.w1.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0008504895830717613,
+      "shape": [
+        640,
+        160
+      ],
+      "length": 102400,
+      "offset": 1324480
+    },
+    "blocks.1.mlp.w2.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0008739444801187891,
+      "shape": [
+        160,
+        640
+      ],
+      "length": 102400,
+      "offset": 1426880
+    },
+    "blocks.1.mlp.w3.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0008034512517959114,
+      "shape": [
+        640,
+        160
+      ],
+      "length": 102400,
+      "offset": 1529280
+    },
+    "blocks.2.norm1.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.00799440117332879,
+      "shape": [
+        160
+      ],
+      "length": 160,
+      "offset": 1631680
+    },
+    "blocks.2.attn.wq.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0010286835938926758,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 1631840
+    },
+    "blocks.2.attn.wk.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0009816778809066833,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 1657440
+    },
+    "blocks.2.attn.wv.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.000653015874971555,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 1683040
+    },
+    "blocks.2.attn.wo.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0007643889723800299,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 1708640
+    },
+    "blocks.2.norm2.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.008050391993184728,
+      "shape": [
+        160
+      ],
+      "length": 160,
+      "offset": 1734240
+    },
+    "blocks.2.mlp.w1.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0008911221163479362,
+      "shape": [
+        640,
+        160
+      ],
+      "length": 102400,
+      "offset": 1734400
+    },
+    "blocks.2.mlp.w2.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0007684535280926021,
+      "shape": [
+        160,
+        640
+      ],
+      "length": 102400,
+      "offset": 1836800
+    },
+    "blocks.2.mlp.w3.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0009325891146509666,
+      "shape": [
+        640,
+        160
+      ],
+      "length": 102400,
+      "offset": 1939200
+    },
+    "blocks.3.norm1.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.00788011137894758,
+      "shape": [
+        160
+      ],
+      "length": 160,
+      "offset": 2041600
+    },
+    "blocks.3.attn.wq.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0010669995245971078,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 2041760
+    },
+    "blocks.3.attn.wk.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0011569669866186426,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 2067360
+    },
+    "blocks.3.attn.wv.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.000649008635930189,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 2092960
+    },
+    "blocks.3.attn.wo.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0007241163549460765,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 2118560
+    },
+    "blocks.3.norm2.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.00813252813234104,
+      "shape": [
+        160
+      ],
+      "length": 160,
+      "offset": 2144160
+    },
+    "blocks.3.mlp.w1.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0008444434075843631,
+      "shape": [
+        640,
+        160
+      ],
+      "length": 102400,
+      "offset": 2144320
+    },
+    "blocks.3.mlp.w2.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0008340824072755228,
+      "shape": [
+        160,
+        640
+      ],
+      "length": 102400,
+      "offset": 2246720
+    },
+    "blocks.3.mlp.w3.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0008237519132809376,
+      "shape": [
+        640,
+        160
+      ],
+      "length": 102400,
+      "offset": 2349120
+    },
+    "blocks.4.norm1.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.008076575797373853,
+      "shape": [
+        160
+      ],
+      "length": 160,
+      "offset": 2451520
+    },
+    "blocks.4.attn.wq.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0010653652074768788,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 2451680
+    },
+    "blocks.4.attn.wk.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.001045409502006891,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 2477280
+    },
+    "blocks.4.attn.wv.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0007062200603522654,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 2502880
+    },
+    "blocks.4.attn.wo.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0007717989561125988,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 2528480
+    },
+    "blocks.4.norm2.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.008129920546464093,
+      "shape": [
+        160
+      ],
+      "length": 160,
+      "offset": 2554080
+    },
+    "blocks.4.mlp.w1.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0008340615808494448,
+      "shape": [
+        640,
+        160
+      ],
+      "length": 102400,
+      "offset": 2554240
+    },
+    "blocks.4.mlp.w2.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0008519916083869033,
+      "shape": [
+        160,
+        640
+      ],
+      "length": 102400,
+      "offset": 2656640
+    },
+    "blocks.4.mlp.w3.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0008813600957862974,
+      "shape": [
+        640,
+        160
+      ],
+      "length": 102400,
+      "offset": 2759040
+    },
+    "blocks.5.norm1.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.008003880658487636,
+      "shape": [
+        160
+      ],
+      "length": 160,
+      "offset": 2861440
+    },
+    "blocks.5.attn.wq.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0010275928758260772,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 2861600
+    },
+    "blocks.5.attn.wk.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0010970280630382028,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 2887200
+    },
+    "blocks.5.attn.wv.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0007635104491954713,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 2912800
+    },
+    "blocks.5.attn.wo.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0007236266112703038,
+      "shape": [
+        160,
+        160
+      ],
+      "length": 25600,
+      "offset": 2938400
+    },
+    "blocks.5.norm2.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.008059089578042819,
+      "shape": [
+        160
+      ],
+      "length": 160,
+      "offset": 2964000
+    },
+    "blocks.5.mlp.w1.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0009472663477649839,
+      "shape": [
+        640,
+        160
+      ],
+      "length": 102400,
+      "offset": 2964160
+    },
+    "blocks.5.mlp.w2.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0008599764014792254,
+      "shape": [
+        160,
+        640
+      ],
+      "length": 102400,
+      "offset": 3066560
+    },
+    "blocks.5.mlp.w3.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.0011447851113447053,
+      "shape": [
+        640,
+        160
+      ],
+      "length": 102400,
+      "offset": 3168960
+    },
+    "norm.weight": {
+      "dtype": "int8",
+      "quantized": true,
+      "bits": 8,
+      "scale": 0.00925790606521246,
+      "shape": [
+        160
+      ],
+      "length": 160,
+      "offset": 3271360
+    }
+  },
+  "weight_file_gz": "weights.int8.bin.gz",
+  "weight_bytes_gz": 2905705
+}

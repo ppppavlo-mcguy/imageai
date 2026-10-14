@@ -1,0 +1,13 @@
+{
+  "name": "local-image-ai",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CPU-trained local image/text/code model with a pure JS/HTML/CSS inference app",
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node web/server.js",
+    "cli": "node web/cli.mjs --model web_model --task image --prompt \"generate the image of a white car\"",
+    "parity": "python tools/check_parity.py checkpoints/tokenizer.json web_model"
+  }
+}

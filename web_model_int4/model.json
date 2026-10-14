@@ -1,0 +1,740 @@
+{
+  "format": "local-gpt-int4-v1",
+  "version": 1,
+  "quantization": "symmetric-group64-int4-fp16scale",
+  "bits": 4,
+  "group_size": 64,
+  "scale_dtype": "fp16",
+  "architecture": {
+    "vocab_size": 4992,
+    "embed_size": 96,
+    "num_heads": 4,
+    "num_layers": 4,
+    "context_length": 512,
+    "dropout": 0.0,
+    "expansion": 4,
+    "tie_embeddings": true,
+    "rope_base": 10000.0,
+    "norm_eps": 1e-05,
+    "loss_chunk": 1024
+  },
+  "tied_embeddings": true,
+  "layout": {
+    "specials": [
+      "<pad>",
+      "<bos>",
+      "<eos>",
+      "<sep>",
+      "<img>",
+      "<cap>",
+      "<ascii>",
+      "<code>",
+      "<ask>"
+    ],
+    "n_text": 887,
+    "text_base": 9,
+    "l1": 4096,
+    "img1_base": 896,
+    "l2": 0,
+    "img2_base": 4992,
+    "detail": false,
+    "total": 4992
+  },
+  "codec": {
+    "img_px": 32,
+    "patch": 4,
+    "sub": 2,
+    "grid": 8,
+    "detail": false,
+    "n1": 64,
+    "n2": 0,
+    "l1_levels": 15,
+    "l1_bits": 4,
+    "l2_min": -3,
+    "l2_max": 3,
+    "det_step": 15.3
+  },
+  "parameter_count": 1069920,
+  "weight_file": "weights.int4.bin",
+  "weight_bytes": 568548,
+  "checkpoint_step": 2566,
+  "tensors": {
+    "token_embedding.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 7488,
+      "padded": 0,
+      "shape": [
+        4992,
+        96
+      ],
+      "length": 239616,
+      "scale_length": 14976,
+      "offset": 0,
+      "data_length": 239616,
+      "scale_offset": 239616
+    },
+    "blocks.0.norm1.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 2,
+      "padded": 32,
+      "shape": [
+        96
+      ],
+      "length": 64,
+      "scale_length": 4,
+      "offset": 254592,
+      "data_length": 64,
+      "scale_offset": 254656
+    },
+    "blocks.0.attn.wq.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 144,
+      "padded": 0,
+      "shape": [
+        96,
+        96
+      ],
+      "length": 4608,
+      "scale_length": 288,
+      "offset": 254660,
+      "data_length": 4608,
+      "scale_offset": 259268
+    },
+    "blocks.0.attn.wk.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 144,
+      "padded": 0,
+      "shape": [
+        96,
+        96
+      ],
+      "length": 4608,
+      "scale_length": 288,
+      "offset": 259556,
+      "data_length": 4608,
+      "scale_offset": 264164
+    },
+    "blocks.0.attn.wv.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 144,
+      "padded": 0,
+      "shape": [
+        96,
+        96
+      ],
+      "length": 4608,
+      "scale_length": 288,
+      "offset": 264452,
+      "data_length": 4608,
+      "scale_offset": 269060
+    },
+    "blocks.0.attn.wo.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 144,
+      "padded": 0,
+      "shape": [
+        96,
+        96
+      ],
+      "length": 4608,
+      "scale_length": 288,
+      "offset": 269348,
+      "data_length": 4608,
+      "scale_offset": 273956
+    },
+    "blocks.0.norm2.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 2,
+      "padded": 32,
+      "shape": [
+        96
+      ],
+      "length": 64,
+      "scale_length": 4,
+      "offset": 274244,
+      "data_length": 64,
+      "scale_offset": 274308
+    },
+    "blocks.0.mlp.w1.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 576,
+      "padded": 0,
+      "shape": [
+        384,
+        96
+      ],
+      "length": 18432,
+      "scale_length": 1152,
+      "offset": 274312,
+      "data_length": 18432,
+      "scale_offset": 292744
+    },
+    "blocks.0.mlp.w2.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 576,
+      "padded": 0,
+      "shape": [
+        96,
+        384
+      ],
+      "length": 18432,
+      "scale_length": 1152,
+      "offset": 293896,
+      "data_length": 18432,
+      "scale_offset": 312328
+    },
+    "blocks.0.mlp.w3.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 576,
+      "padded": 0,
+      "shape": [
+        384,
+        96
+      ],
+      "length": 18432,
+      "scale_length": 1152,
+      "offset": 313480,
+      "data_length": 18432,
+      "scale_offset": 331912
+    },
+    "blocks.1.norm1.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 2,
+      "padded": 32,
+      "shape": [
+        96
+      ],
+      "length": 64,
+      "scale_length": 4,
+      "offset": 333064,
+      "data_length": 64,
+      "scale_offset": 333128
+    },
+    "blocks.1.attn.wq.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 144,
+      "padded": 0,
+      "shape": [
+        96,
+        96
+      ],
+      "length": 4608,
+      "scale_length": 288,
+      "offset": 333132,
+      "data_length": 4608,
+      "scale_offset": 337740
+    },
+    "blocks.1.attn.wk.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 144,
+      "padded": 0,
+      "shape": [
+        96,
+        96
+      ],
+      "length": 4608,
+      "scale_length": 288,
+      "offset": 338028,
+      "data_length": 4608,
+      "scale_offset": 342636
+    },
+    "blocks.1.attn.wv.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 144,
+      "padded": 0,
+      "shape": [
+        96,
+        96
+      ],
+      "length": 4608,
+      "scale_length": 288,
+      "offset": 342924,
+      "data_length": 4608,
+      "scale_offset": 347532
+    },
+    "blocks.1.attn.wo.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 144,
+      "padded": 0,
+      "shape": [
+        96,
+        96
+      ],
+      "length": 4608,
+      "scale_length": 288,
+      "offset": 347820,
+      "data_length": 4608,
+      "scale_offset": 352428
+    },
+    "blocks.1.norm2.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 2,
+      "padded": 32,
+      "shape": [
+        96
+      ],
+      "length": 64,
+      "scale_length": 4,
+      "offset": 352716,
+      "data_length": 64,
+      "scale_offset": 352780
+    },
+    "blocks.1.mlp.w1.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 576,
+      "padded": 0,
+      "shape": [
+        384,
+        96
+      ],
+      "length": 18432,
+      "scale_length": 1152,
+      "offset": 352784,
+      "data_length": 18432,
+      "scale_offset": 371216
+    },
+    "blocks.1.mlp.w2.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 576,
+      "padded": 0,
+      "shape": [
+        96,
+        384
+      ],
+      "length": 18432,
+      "scale_length": 1152,
+      "offset": 372368,
+      "data_length": 18432,
+      "scale_offset": 390800
+    },
+    "blocks.1.mlp.w3.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 576,
+      "padded": 0,
+      "shape": [
+        384,
+        96
+      ],
+      "length": 18432,
+      "scale_length": 1152,
+      "offset": 391952,
+      "data_length": 18432,
+      "scale_offset": 410384
+    },
+    "blocks.2.norm1.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 2,
+      "padded": 32,
+      "shape": [
+        96
+      ],
+      "length": 64,
+      "scale_length": 4,
+      "offset": 411536,
+      "data_length": 64,
+      "scale_offset": 411600
+    },
+    "blocks.2.attn.wq.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 144,
+      "padded": 0,
+      "shape": [
+        96,
+        96
+      ],
+      "length": 4608,
+      "scale_length": 288,
+      "offset": 411604,
+      "data_length": 4608,
+      "scale_offset": 416212
+    },
+    "blocks.2.attn.wk.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 144,
+      "padded": 0,
+      "shape": [
+        96,
+        96
+      ],
+      "length": 4608,
+      "scale_length": 288,
+      "offset": 416500,
+      "data_length": 4608,
+      "scale_offset": 421108
+    },
+    "blocks.2.attn.wv.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 144,
+      "padded": 0,
+      "shape": [
+        96,
+        96
+      ],
+      "length": 4608,
+      "scale_length": 288,
+      "offset": 421396,
+      "data_length": 4608,
+      "scale_offset": 426004
+    },
+    "blocks.2.attn.wo.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 144,
+      "padded": 0,
+      "shape": [
+        96,
+        96
+      ],
+      "length": 4608,
+      "scale_length": 288,
+      "offset": 426292,
+      "data_length": 4608,
+      "scale_offset": 430900
+    },
+    "blocks.2.norm2.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 2,
+      "padded": 32,
+      "shape": [
+        96
+      ],
+      "length": 64,
+      "scale_length": 4,
+      "offset": 431188,
+      "data_length": 64,
+      "scale_offset": 431252
+    },
+    "blocks.2.mlp.w1.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 576,
+      "padded": 0,
+      "shape": [
+        384,
+        96
+      ],
+      "length": 18432,
+      "scale_length": 1152,
+      "offset": 431256,
+      "data_length": 18432,
+      "scale_offset": 449688
+    },
+    "blocks.2.mlp.w2.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 576,
+      "padded": 0,
+      "shape": [
+        96,
+        384
+      ],
+      "length": 18432,
+      "scale_length": 1152,
+      "offset": 450840,
+      "data_length": 18432,
+      "scale_offset": 469272
+    },
+    "blocks.2.mlp.w3.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 576,
+      "padded": 0,
+      "shape": [
+        384,
+        96
+      ],
+      "length": 18432,
+      "scale_length": 1152,
+      "offset": 470424,
+      "data_length": 18432,
+      "scale_offset": 488856
+    },
+    "blocks.3.norm1.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 2,
+      "padded": 32,
+      "shape": [
+        96
+      ],
+      "length": 64,
+      "scale_length": 4,
+      "offset": 490008,
+      "data_length": 64,
+      "scale_offset": 490072
+    },
+    "blocks.3.attn.wq.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 144,
+      "padded": 0,
+      "shape": [
+        96,
+        96
+      ],
+      "length": 4608,
+      "scale_length": 288,
+      "offset": 490076,
+      "data_length": 4608,
+      "scale_offset": 494684
+    },
+    "blocks.3.attn.wk.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 144,
+      "padded": 0,
+      "shape": [
+        96,
+        96
+      ],
+      "length": 4608,
+      "scale_length": 288,
+      "offset": 494972,
+      "data_length": 4608,
+      "scale_offset": 499580
+    },
+    "blocks.3.attn.wv.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 144,
+      "padded": 0,
+      "shape": [
+        96,
+        96
+      ],
+      "length": 4608,
+      "scale_length": 288,
+      "offset": 499868,
+      "data_length": 4608,
+      "scale_offset": 504476
+    },
+    "blocks.3.attn.wo.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 144,
+      "padded": 0,
+      "shape": [
+        96,
+        96
+      ],
+      "length": 4608,
+      "scale_length": 288,
+      "offset": 504764,
+      "data_length": 4608,
+      "scale_offset": 509372
+    },
+    "blocks.3.norm2.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 2,
+      "padded": 32,
+      "shape": [
+        96
+      ],
+      "length": 64,
+      "scale_length": 4,
+      "offset": 509660,
+      "data_length": 64,
+      "scale_offset": 509724
+    },
+    "blocks.3.mlp.w1.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 576,
+      "padded": 0,
+      "shape": [
+        384,
+        96
+      ],
+      "length": 18432,
+      "scale_length": 1152,
+      "offset": 509728,
+      "data_length": 18432,
+      "scale_offset": 528160
+    },
+    "blocks.3.mlp.w2.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 576,
+      "padded": 0,
+      "shape": [
+        96,
+        384
+      ],
+      "length": 18432,
+      "scale_length": 1152,
+      "offset": 529312,
+      "data_length": 18432,
+      "scale_offset": 547744
+    },
+    "blocks.3.mlp.w3.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 576,
+      "padded": 0,
+      "shape": [
+        384,
+        96
+      ],
+      "length": 18432,
+      "scale_length": 1152,
+      "offset": 548896,
+      "data_length": 18432,
+      "scale_offset": 567328
+    },
+    "norm.weight": {
+      "dtype": "int4",
+      "quantized": true,
+      "bits": 4,
+      "group_size": 64,
+      "scale_dtype": "fp16",
+      "groups": 2,
+      "padded": 32,
+      "shape": [
+        96
+      ],
+      "length": 64,
+      "scale_length": 4,
+      "offset": 568480,
+      "data_length": 64,
+      "scale_offset": 568544
+    }
+  },
+  "weight_file_gz": "weights.int4.bin.gz",
+  "weight_bytes_gz": 362264
+}
