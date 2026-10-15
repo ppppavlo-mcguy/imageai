@@ -12,7 +12,8 @@
  */
 import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { closeSync, existsSync, openSync, readFileSync, readdirSync, readSync, statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { PROJECT_ROOT } from '../web/server.js';
 import { npmCommand, packagerCommand, packagerPath, commandLine, quoteArg } from './shellcmd.mjs';
@@ -28,6 +29,23 @@ const check = (name, cond, detail = '') => {
 
 const root = PROJECT_ROOT;
 const stage = join(root, 'desktop', 'build', 'app');
+const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
+
+/** The file index of the packed Electron app, without loading the 240 MB payload behind it.
+ *  asar layout: [4][header size][4][json length][json] then the file data. Every entry carries a
+ *  SHA256 of the file it points at, which is exactly the question worth asking of a build: is the
+ *  UI inside the .exe the UI that is in web/ right now? */
+function readAsarHeader(path) {
+  const fd = openSync(path, 'r');
+  try {
+    const head = Buffer.alloc(16);
+    readSync(fd, head, 0, 16, 0);
+    const region = Buffer.alloc(head.readUInt32LE(4) + 8);
+    readSync(fd, region, 0, region.length, 0);
+    const jsonLen = head.readUInt32LE(12);
+    return JSON.parse(region.subarray(16, 16 + jsonLen).toString('utf8'));
+  } finally { closeSync(fd); }
+}
 
 /* ------------------------------------------------------------ boot.cjs itself */
 check('dev layout resolves to the project root',
@@ -118,6 +136,26 @@ if (existsSync(stage)) {
     const zips = existsSync(join(root, 'downloads'))
       ? readdirSync(join(root, 'downloads')).filter(n => /^sgm-desktop.*\.zip$/.test(n)) : [];
     check('the download the web UI offers exists', zips.length >= 1, zips.join(', '));
+
+    /* The packaged app has to carry the UI as it is now, not the one from the last build. */
+    const asar = join(dist, win, 'resources', 'app.asar');
+    if (!existsSync(asar)) {
+      console.log('  skip  the packaged app.asar (rebuild with: node tools/build_desktop.mjs)');
+    } else {
+      const header = readAsarHeader(asar);
+      const files = (header.files && header.files.web && header.files.web.files) || {};
+      const wanted = ['app.js', 'code.js', 'index.html', 'style.css', 'worker.js', 'tasks.js',
+                      'engine.js', 'models.json', 'server.js'];
+      const stale = wanted.filter(f => !files[f] || files[f].integrity.hash !== sha256(readFileSync(join(root, 'web', f))));
+      check('the packaged .exe carries web/ exactly as it is now (asar hashes)', stale.length === 0,
+        stale.length ? `stale: ${stale.join(', ')}` : `${wanted.length} files, incl. web/code.js`);
+      const ver = header.files.VERSION;
+      check('the packaged app reports the same release as VERSION',
+        !!ver && ver.integrity.hash === sha256(readFileSync(join(root, 'VERSION'))),
+        readFileSync(join(root, 'VERSION'), 'utf8').trim());
+      const bundles = Object.keys(header.files).filter(n => /^web_model|^models$/.test(n));
+      check('the packaged app carries the model bundles', bundles.length >= 1, bundles.join(', '));
+    }
   }
 }
 

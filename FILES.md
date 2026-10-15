@@ -144,7 +144,7 @@ three build bugs**:
 | `tools/check_code.mjs` | **new (17 + 16 checks)**: the routing table (including the two prompts that used to route wrong), the phrasing rewrite, the language matcher |
 | `tools/check_ui.mjs` | + 7 checks: selector position, model list, streaming toggle, token slider, the prompt being rendered |
 | `tools/check_web_tasks.mjs` | + 6 checks: the 512 default, a small budget honoured, `hitLimit`, streamed tokens, the context guard |
-| `tools/check_desktop.mjs` | + 5 checks: the platform command names, quoting, the single-line install command, no `execFileSync` left; `web/code.js` added to the staged-app list |
+| `tools/check_desktop.mjs` | + 8 checks: the platform command names, quoting, the single-line install command, no `execFileSync` left, `web/code.js` in the staged-app list, and the asar hashes proving the packaged `.exe` carries this `web/` (and `VERSION`) |
 | `setup.cmd`, `train.cmd`, `export.cmd`, `train_code.cmd`, `train_ui.cmd`, `train_10m.cmd`, `export_10m.cmd`, `train_100m.cmd`, `export_100m.cmd` | call `.venv\Scripts\python.exe` directly instead of `call .venv\Scripts\activate` (the *"system cannot find the path specified"* before the export ran), `cd /d "%~dp0"`, and a clear message when the venv or the checkpoint is missing |
 | `VERSION` | `v1` -> **`v2`** (new artifacts: `sgm-1m-v2.zip`, `sgm-desktop-v2.zip`, `sgm-v2.zip`) |
 | `package.json` | `npm test` includes `test:code` |

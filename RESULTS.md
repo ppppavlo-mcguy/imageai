@@ -317,13 +317,14 @@ still describes the shipped bundles.
 ```
 node tools/check_ui.mjs           UI OK          25 checks (66 ids, selector in the composer, stream + token slider wired)
 node tools/check_code.mjs         CODE OK        33 checks (16 routing prompts, phrasing, language notes)
-node tools/check_http.mjs         HTTP OK        30 checks (21 routes + a downloaded zip that generates identically)
+node tools/check_http.mjs         HTTP OK        31 checks (21 routes + a downloaded zip that generates identically)
 node tools/check_web_tasks.mjs    WEB TASKS OK   60 checks (11 task paths x 3 bundles + 12 budget/stream/guard checks)
 node tools/check_gallery.mjs      GALLERY OK     18 checks
 node tools/check_zip.mjs          ZIP OK         10 checks, archive read back by Python's zipfile
 node tools/check_models.mjs       MODELS OK      18 checks
 node tools/check_store.mjs        STORE OK       21 checks
-node tools/check_desktop.mjs      DESKTOP OK     20 checks incl. the Windows command line and a real PE file
+node tools/check_desktop.mjs      DESKTOP OK     23 checks incl. the Windows command line, a real PE file, and the
+                                                 asar hashes that prove the .exe carries this web/ (and VERSION v2)
 python tools/check_tasks.py --mix multi|code|image|all    TASKS OK x4, 10 kinds
 python tools/check_parity.py web_model/tokenizer.json web_model
                                   PARITY OK      9 formats, greedy + forward, |dlogit| 0.00001

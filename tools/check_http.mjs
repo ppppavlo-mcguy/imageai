@@ -34,6 +34,9 @@ console.log(`  serving on 127.0.0.1:${port}`);
   check('the UI is served', page.status === 200 && /<title>SGM/.test(html));
   check('the model picker and gallery are in the page',
     html.includes('id="modelSelect"') && html.includes('id="galleryBtn"') && html.includes('id="dlModal"'));
+  check('the served composer carries the selector, the stream toggle and the token slider',
+    /id="composer"/.test(html) && html.includes('id="modelPill"') && html.includes('id="streamBtn"')
+    && html.includes('id="maxNew"') && html.includes('data-tab="models"'));
   for (const f of ['/web/app.js', '/web/style.css', '/web/gallery.js', '/web/models.js', '/web/zip.js', '/web/models.json']) {
     const r = await get(f);
     check(`${f} is served`, r.status === 200, `http ${r.status}`);
