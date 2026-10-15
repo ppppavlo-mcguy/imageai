@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "release": "v1",
+  "release": "v2",
   "default": "sgm-1m",
   "models": [
     {

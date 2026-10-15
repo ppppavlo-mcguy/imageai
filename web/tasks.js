@@ -118,6 +118,17 @@ export function codesToRgba(engine, ids) {
   return codec.decode(l1, l2);
 }
 
+/** How a text answer ended, so the UI can say "that is all it wrote" instead of "it finished".
+ *  512 tokens is the default budget for code: 240 used to cut a page off mid-attribute, which is
+ *  exactly what makes a half-finished answer look like a syntax error instead of a limit. */
+export const DEFAULT_CODE_TOKENS = 512;
+
+function finish(rt, out) {
+  const limit = rt.maxNew || out.length;
+  const stopped = out.length > 0 && out[out.length - 1] === EOS;
+  return { limit, stopped, hitLimit: !stopped && out.length >= limit };
+}
+
 export async function runTask(engine, opts) {
   const { task, prompt = '', rgba = null, width = 0, maxNew = null, temp = 0.9, topK = 64,
           topP = 0.95, seed = null, onProgress = null, ascii = null, code = null,
@@ -141,33 +152,33 @@ export async function runTask(engine, opts) {
     const { l1, l2 } = codec.encode(rgba, width);
     const ids = visionPromptIds(tok, layout, l1, l2, QUESTIONS[task]);
     const out = await rt.generate(ids, { ...common, maxNew: maxNew || (task === 'ascii' ? 520 : 40) });
-    return { kind: 'text', text: tok.decode(out), ids: out };
+    return { kind: 'text', text: tok.decode(out), ids: out, ...finish(rt, out) };
   }
   if (task === 'code') {
     const ids = codePromptIds(tok, prompt || 'write html for a blue card');
-    const out = await rt.generate(ids, { ...common, maxNew: maxNew || 240 });
-    return { kind: 'code', text: tok.decode(out), ids: out };
+    const out = await rt.generate(ids, { ...common, maxNew: maxNew || DEFAULT_CODE_TOKENS });
+    return { kind: 'code', text: tok.decode(out), ids: out, ...finish(rt, out) };
   }
   if (task === 'fix') {
     const snippet = (opts.code || '').trim();
     if (!snippet) throw new Error('attach or paste the snippet that failed');
     const ids = fixPromptIds(tok, snippet, opts.question || fixQuestion(opts.error));
-    const out = await rt.generate(ids, { ...common, maxNew: maxNew || 260 });
-    return { kind: 'code', text: tok.decode(out), ids: out };
+    const out = await rt.generate(ids, { ...common, maxNew: maxNew || DEFAULT_CODE_TOKENS });
+    return { kind: 'code', text: tok.decode(out), ids: out, ...finish(rt, out) };
   }
   if (task === 'ascii2code') {
     const art = opts.ascii || (rgba ? toAscii(rgba, 32, 0.5) : '');
     if (!art) throw new Error('paste ascii art or attach an image first');
     const ids = ascii2codePromptIds(tok, art, prompt || INSTRUCTIONS.ascii2code);
-    const out = await rt.generate(ids, { ...common, maxNew: maxNew || 260 });
-    return { kind: 'code', text: tok.decode(out), ids: out };
+    const out = await rt.generate(ids, { ...common, maxNew: maxNew || DEFAULT_CODE_TOKENS });
+    return { kind: 'code', text: tok.decode(out), ids: out, ...finish(rt, out) };
   }
   if (task === 'img2code') {
     if (!rgba) throw new Error('this task needs an image');
     const { l1, l2 } = codec.encode(rgba, width);
     const ids = img2codePromptIds(tok, layout, l1, l2, prompt || INSTRUCTIONS.img2code);
-    const out = await rt.generate(ids, { ...common, maxNew: maxNew || 260 });
-    return { kind: 'code', text: tok.decode(out), ids: out };
+    const out = await rt.generate(ids, { ...common, maxNew: maxNew || DEFAULT_CODE_TOKENS });
+    return { kind: 'code', text: tok.decode(out), ids: out, ...finish(rt, out) };
   }
   if (task === 'code2img') {
     const snippet = (opts.code || prompt || '').trim() || '<div class="card">blue page</div>';
@@ -180,6 +191,6 @@ export async function runTask(engine, opts) {
     return { kind: 'image', rgba: px, width: codec.img_px, height: codec.img_px, ids: out };
   }
   const ids = textPromptIds(tok, prompt);
-  const out = await rt.generate(ids, { ...common, maxNew: maxNew || 120 });
-  return { kind: 'text', text: tok.decode(out), ids: out };
+  const out = await rt.generate(ids, { ...common, maxNew: maxNew || 160 });
+  return { kind: 'text', text: tok.decode(out), ids: out, ...finish(rt, out) };
 }

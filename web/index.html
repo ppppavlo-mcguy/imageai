@@ -39,31 +39,6 @@
     </nav>
 
     <div class="sideBottom">
-      <div class="modelCard">
-        <div class="modelHead">
-          <span class="dot" id="dot"></span>
-          <span id="modelState">no model loaded</span>
-        </div>
-        <div class="modelMeta" id="modelInfo">the model loads by itself on your first message</div>
-        <label class="field">
-          <span>model</span>
-          <select id="modelSelect"></select>
-        </label>
-        <div class="modelRow">
-          <button id="load" class="ghost">Load now</button>
-          <span class="muted small" id="status">idle</span>
-        </div>
-        <p class="tiny muted" id="modelNote"></p>
-        <details class="settings">
-          <summary>custom folder</summary>
-          <label class="field">
-            <span>model folder (relative to the project root)</span>
-            <input id="modelDir" value="web_model" spellcheck="false">
-          </label>
-          <button id="loadDir" class="ghost tiny">load this folder</button>
-        </details>
-      </div>
-
       <details class="settings">
         <summary>sampling</summary>
         <label class="field"><span>temperature <b id="tempV">0.70</b></span>
@@ -72,7 +47,11 @@
           <input id="topk" type="range" min="0" max="256" step="1" value="64"></label>
         <label class="field"><span>top-p <b id="topPV">0.95</b></span>
           <input id="topP" type="range" min="0.1" max="1" step="0.01" value="0.95"></label>
+        <label class="field"><span>max new tokens <b id="maxNewV">512</b></span>
+          <input id="maxNew" type="range" min="64" max="1024" step="64" value="512"></label>
         <label class="field"><span>seed</span><input id="seed" type="number" value="1234"></label>
+        <p class="tiny muted note">code answers stop at “max new tokens”; the cap is fitted to the
+        model's context window automatically.</p>
       </details>
 
       <div class="storage">
@@ -109,6 +88,12 @@
         <button id="pick" class="iconBtn" title="attach files (＋)">＋</button>
         <input id="files" type="file" multiple hidden>
         <textarea id="prompt" rows="1" placeholder="Ask anything — “a big white car on a blue background”, “make a snake game”, attach a file and say “fix this i got an error”…"></textarea>
+        <button id="streamBtn" class="streamBtn on" aria-pressed="true"
+                title="stream the answer into the chat while it is being written">stream on</button>
+        <button id="modelPill" class="modelPill"
+                title="pick a model — opens the model list">
+          <span class="dot" id="dot"></span><b id="modelPillName">no model</b><span class="caret">▾</span>
+        </button>
         <button id="send" class="send" title="send (Enter)">↑</button>
       </div>
       <p class="tiny muted limits" id="limitsHint">up to 12 files per chat · 4 MB each · 32 MB per chat · everything stays in this tab (no external requests)</p>
@@ -134,16 +119,51 @@
     </div>
   </div>
 
-  <!-- ============================================================ downloads -->
+  <!-- ================================ models + downloads (the model selector lives here) -->
   <div id="dlModal" class="modal hidden">
     <div class="modalCard">
       <div class="modalHead">
-        <b>Downloads</b>
+        <b>Models &amp; downloads</b>
+        <div class="tabs" id="dlTabs">
+          <button data-tab="models" class="active">models</button>
+          <button data-tab="app">desktop app</button>
+        </div>
         <span class="spacer"></span>
         <span class="tiny muted" id="dlRelease"></span>
         <button id="dlClose" class="ghost">close</button>
       </div>
-      <div id="dlBody" class="dlBody"></div>
+      <div class="dlBody">
+        <section id="dlModels" class="dlSection">
+          <div class="modelCard">
+            <div class="modelHead">
+              <span id="modelState">no model loaded</span>
+            </div>
+            <div class="modelMeta" id="modelInfo">the model loads by itself on your first message</div>
+            <label class="field">
+              <span>model</span>
+              <select id="modelSelect"></select>
+            </label>
+            <div class="modelRow">
+              <button id="load" class="ghost">Load now</button>
+              <span class="muted small" id="status">idle</span>
+            </div>
+            <p class="tiny muted" id="modelNote"></p>
+            <details class="settings">
+              <summary>custom folder</summary>
+              <label class="field">
+                <span>model folder (relative to the project root)</span>
+                <input id="modelDir" value="web_model" spellcheck="false">
+              </label>
+              <button id="loadDir" class="ghost tiny">load this folder</button>
+            </details>
+          </div>
+          <div id="dlModelRows" class="dlRows"></div>
+          <p class="tiny muted" id="dlModelsNote"></p>
+        </section>
+        <section id="dlApp" class="dlSection hidden">
+          <div id="dlAppRows" class="dlRows"></div>
+        </section>
+      </div>
     </div>
   </div>
 </div>

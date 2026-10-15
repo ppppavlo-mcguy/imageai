@@ -11,7 +11,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { Engine } from '../web/engine.js';
-import { runTask } from '../web/tasks.js';
+import { runTask, DEFAULT_CODE_TOKENS } from '../web/tasks.js';
 import { PROJECT_ROOT } from '../web/server.js';
 
 let failures = 0;
@@ -82,6 +82,38 @@ for (const name of bundles) {
   check('ascii art without any input is refused',
     await throws({ task: 'ascii2code', ascii: '', maxNew: 4 }));
   check('fix with an empty snippet is refused', await throws({ task: 'fix', code: '   ', maxNew: 4 }));
+
+  /* --- the token budget: what the UI's "max new tokens" slider and the cap warning rest on --- */
+  check('the default code budget is 512, not the 240 that cut pages in half',
+    DEFAULT_CODE_TOKENS === 512, `${DEFAULT_CODE_TOKENS} tokens`);
+  const short = await runTask(engine, {
+    task: 'code', prompt: 'write html for a blue card', maxNew: 16, temp: 0, topK: 1, seed: 4,
+  });
+  check('a small budget is honoured and reported',
+    short.ids.length <= 16 && short.limit === 16 && typeof short.hitLimit === 'boolean',
+    `${short.ids.length}/${short.limit} tokens, hitLimit=${short.hitLimit}, stopped=${short.stopped}`);
+  check('an answer that ran into the cap says so',
+    !short.hitLimit || short.ids.length === 16, 'hitLimit only when it really ran out');
+
+  /* --- streaming: onProgress hands over the tokens produced so far ---------------------------- */
+  const seen = [];
+  const streamed = await runTask(engine, {
+    task: 'code', prompt: 'write html for a blue card', maxNew: 48, temp: 0, topK: 1, seed: 4,
+    onProgress: p => seen.push({ done: p.done, total: p.total, ids: p.ids ? p.ids.length : 0 }),
+  });
+  const grew = seen.length > 1 && seen.every((s, i) => i === 0 || s.ids >= seen[i - 1].ids);
+  check('the tokens produced so far are streamed out',
+    seen.length >= 2 && grew && seen[seen.length - 1].ids === streamed.ids.length,
+    `${seen.length} updates, ${seen.map(s => s.ids).join('→')}`);
+  check('progress reports the adjusted budget as the total',
+    seen.every(s => s.total === streamed.limit), `total ${streamed.limit}`);
+
+  /* --- a prompt that cannot fit the context window is refused before it starts --------------- */
+  let longError = null;
+  try { await runTask(engine, { task: 'code', prompt: 'write html for ' + 'a very long card '.repeat(400) }); }
+  catch (e) { longError = e.message; }
+  check('an oversized prompt is refused with a readable message',
+    !!longError && /more than this model can read/.test(longError), longError || 'no error');
 }
 
 console.log(failures ? `WEB TASKS FAILED (${failures})` : 'WEB TASKS OK');

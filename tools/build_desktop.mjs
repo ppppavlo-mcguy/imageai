@@ -19,10 +19,10 @@
  * turns it into a single .exe installer / portable exe.
  */
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
-import { execFileSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { buildZip, versionedName } from '../web/zip.js';
 import { PROJECT_ROOT, modelManifest, readRelease, desktopArtifacts } from '../web/server.js';
+import { npmCommand, packagerCommand, packagerPath, runInShell } from './shellcmd.mjs';
 
 const arg = (name, dflt = null) => {
   const hit = process.argv.find(a => a.startsWith(`--${name}=`));
@@ -87,8 +87,7 @@ if (arg('stage-only')) {
 const needInstall = !existsSync(join(desktop, 'node_modules', 'electron'));
 if (needInstall && !arg('skip-install')) {
   say('installing electron + @electron/packager in desktop/ (first run downloads ~120 MB)…');
-  execFileSync(process.platform === 'win32' ? 'npm.cmd' : 'npm',
-    ['install', '--save-dev', 'electron', '@electron/packager'], { cwd: desktop, stdio: 'inherit' });
+  runInShell(npmCommand(), ['install', '--save-dev', 'electron', '@electron/packager'], desktop);
 }
 if (!existsSync(join(desktop, 'node_modules', 'electron'))) {
   say('electron is not installed - run "npm install --save-dev electron @electron/packager" in desktop/ and retry');
@@ -99,17 +98,21 @@ const electronVersion = JSON.parse(
 say(`electron ${electronVersion}`);
 
 /* ---------------------------------------------------------------- 3. package */
-const packager = join(desktop, 'node_modules', '.bin', process.platform === 'win32' ? 'electron-packager.cmd' : 'electron-packager');
+const packager = packagerCommand();
+if (!existsSync(packagerPath(desktop))) {
+  say('@electron/packager is not installed - run "npm install --save-dev electron @electron/packager" in desktop/ and retry');
+  process.exit(1);
+}
 rmSync(join(desktop, 'dist'), { recursive: true, force: true });
 const outputs = [];
 for (const plat of platforms) {
   const out = join(desktop, 'dist');
   const before = new Set(existsSync(out) ? readdirSync(out) : []);
   say(`packaging for ${plat} (the electron binary for that platform is downloaded now)…`);
-  execFileSync(packager, [stage, 'SGM', `--platform=${plat}`, '--arch=x64', `--out=${out}`,
+  runInShell(packager, [stage, 'SGM', `--platform=${plat}`, '--arch=x64', `--out=${out}`,
     '--overwrite', `--electron-version=${electronVersion}`, '--app-version=1.0.0',
     '--executable-name=SGM', '--prune=true', `--app-copyright=SGM (${release})`],
-    { cwd: desktop, stdio: 'inherit' });
+    desktop);
   const dir = readdirSync(out).find(n => !before.has(n) && n.startsWith('SGM-'));
   if (dir) outputs.push(join(out, dir));
   else say(`WARNING: could not find the packaged folder for ${plat} in ${out}`);

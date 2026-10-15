@@ -42,6 +42,36 @@ check('the gallery can zip what the chat created',
   app.includes('downloadGalleryZip') && app.includes('buildZip') && /galleryZip/.test(html));
 check('the model picker is a select, plus a manual folder', /id="modelSelect"/.test(html)
   && /id="modelDir"/.test(html) && app.includes('ensureModel'));
+const composer = html.match(/<footer id="composer">([\s\S]*?)<\/footer>/)[1];
+const sideBottom = html.match(/<div class="sideBottom">([\s\S]*?)<\/aside>/)[1];
+check('the model selector sits in the composer, on the right',
+  /id="composer"/.test(html) && composer.includes('id="modelPill"')
+  && composer.indexOf('id="modelSelect"') < 0
+  && composer.indexOf('id="modelPill"') > composer.indexOf('id="prompt"')
+  && composer.indexOf('id="modelPill"') < composer.indexOf('id="send"'),
+  'pill between the prompt box and send');
+check('the selector is no longer at the bottom of the tools list',
+  !sideBottom.includes('modelSelect') && !sideBottom.includes('modelPill'),
+  'rail keeps sampling + storage only');
+check('the selector opens the model list, not a bare dropdown',
+  /\$\('modelPill'\)\.onclick = \(\) => openDownloads\('models'\)/.test(app)
+  && /id="dlTabs"/.test(html) && /data-tab="models"/.test(html) && /data-tab="app"/.test(html)
+  && app.includes('showDlTab') && app.includes('renderDlModels'));
+check('a model row in the list can be chosen, not only downloaded',
+  app.includes('chooseModel') && /textContent = 'use'/.test(app)
+  && /dlModelRows/.test(html) && app.includes('selected'));
+check('answers can stream as they are written',
+  /id="streamBtn"/.test(html) && app.includes('setStream') && app.includes("type === 'stream'")
+  && app.includes('renderStream'));
+check('the token budget is adjustable instead of a hidden 240',
+  /id="maxNew"/.test(html) && app.includes("parseInt($('maxNew').value")
+  && /maxNew: parseInt/.test(app) && /maxNew/.test(html.match(/<details class="settings">([\s\S]*?)<\/details>/)[1]));
+check('your own prompt appears in the chat when it is sent',
+  /const userMsg = \{ role: 'user'/.test(app) && /renderInto\(null, userMsg\)/.test(app));
+check('asking for another language is not silently answered in html',
+  app.includes("from './code.js'") && app.includes('codeInstruction(') && app.includes('languageNote(')
+  && readFileSync(join(PROJECT_ROOT, 'web', 'code.js'), 'utf8').includes('export function codeInstruction'),
+  'web/code.js shapes the instruction and warns on a mismatch');
 check('the model loads on the first message, not at page load',
   /ensureModel\(\)/.test(app) && !/loadModel\(\);/.test(app)
   && app.includes("loads on your first message"));

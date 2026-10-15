@@ -416,7 +416,13 @@ export class Runtime {
     return order[order.length - 1] + lo;
   }
 
-  /** Autoregressive sampling with the KV cache. `region(step)` returns {lo,hi} or EOS to stop. */
+  /** Autoregressive sampling with the KV cache. `region(step)` returns {lo,hi} or EOS to stop.
+   *
+   *  `onProgress({step, done, total, ids})` is called every few tokens; `ids` is the live array of
+   *  tokens produced so far, which is what the UI streams into the answer bubble. `total` is the
+   *  token budget *after* it was fitted to the model's context window (`maxNew` is clamped here so
+   *  a long prompt can never walk into "context length exceeded" mid-answer). The effective budget
+   *  is left on `this.maxNew` for callers that report whether an answer was cut off. */
   async generate(promptIds, { maxNew = 420, temp = 0.9, topK = 64, topP = 0.95, repPenalty = 1.1,
                               region = null, stopIds = [EOS], onProgress = null, seed = null,
                               minNew = 0 } = {}) {
@@ -425,10 +431,17 @@ export class Runtime {
     e.reset();
     const produced = [];
     if (!promptIds.length) promptIds = [BOS];
+    const room = e.ctx - promptIds.length;          // one slot is the token we sample next
+    if (room < 1) {
+      throw new Error(`the prompt is ${promptIds.length} tokens, more than this model can read ` +
+                      `(${e.ctx}) - shorten it or attach a smaller file`);
+    }
+    this.maxNew = Math.max(1, Math.min(maxNew, room));
+    const budget = this.maxNew;
     let pos = 0;
     for (let i = 0; i < promptIds.length - 1; i++) e.step(promptIds[i], pos++, 0, 1);
     let cur = promptIds[promptIds.length - 1];
-    for (let step = 0; step < maxNew; step++) {
+    for (let step = 0; step < budget; step++) {
       const allowed = region ? region(step) : null;
       if (allowed === EOS || typeof allowed === 'number') { produced.push(EOS); break; }
       const lo = allowed ? allowed.lo : 0;
@@ -440,8 +453,8 @@ export class Runtime {
       produced.push(tok);
       if (stopIds.includes(tok)) break;
       cur = tok;
-      if (onProgress && (step % 8 === 0 || step === maxNew - 1)) {
-        onProgress({ step, done: produced.length, total: maxNew });
+      if (onProgress && (step % 8 === 0 || step === budget - 1)) {
+        onProgress({ step, done: produced.length, total: budget, ids: produced });
         await new Promise(r => setTimeout(r, 0));
       }
     }

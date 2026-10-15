@@ -3,19 +3,30 @@
 A small multimodal model you can train on a Windows PC with no GPU, then run **entirely in the
 browser** as plain HTML + CSS + JS (or from Node). One transformer, one vocabulary, five jobs:
 
-The UI is a **chat app** (`web/`): a model picker and a tool rail on the left, the conversation on
+The UI is a **chat app** (`web/`): a tool rail and the **Gallery** on the left, the conversation on
 the right, and the answer for each turn as an image, a code card with *Copy* and *Preview as page*,
-or ASCII art. Dark and light themes, uploads with **＋**, and everything — chats, uploads, model —
-stays in the browser tab (no external requests).
+or ASCII art. The **model selector sits in the composer on the right** (`◈ SGM-3M-code ▾`) and opens
+the model list, where a bundle is chosen or downloaded. Dark and light themes, uploads with **＋**,
+and everything — chats, uploads, model — stays in the browser tab (no external requests).
 
 * **Gallery** (`Gallery` button): every file a chat created — PNGs, code, ASCII art — in one grid,
   each downloadable on its own or all together as a `.zip` (zipped in the tab by `web/zip.js`).
-* **Model picker**: `web/models.json` plus what the bundled server finds on disk, so `SGM-1M`,
-  `SGM-3M-code`, `SGM-1M-int4`, `SGM-10M` … are all selectable. A bundle is only loaded **when you
-  send the first message** (or press *Load now*), and the picker disables the tools a model was
-  never trained for instead of silently producing noise.
+* **Model picker, in the composer**: the pill next to the send button shows which bundle will
+  answer; clicking it opens **Models & downloads** on the *models* tab, where `SGM-1M`,
+  `SGM-3M-code`, `SGM-1M-int4` and (planned) `SGM-10M` / `SGM-100M` are listed with their size and
+  tasks, each with a *use* button and its `.zip` download in the same row. The list comes from
+  `web/models.json` plus what the bundled server finds on disk, so a freshly exported bundle shows
+  up by itself. A bundle is only loaded **when you send the first message** (or press *Load now*),
+  and the rail greys out the tools a model was never trained for instead of producing noise.
+* **Streaming answers** (`stream on` next to the composer, remembered): tokens appear in the bubble
+  while the model writes them, instead of after the whole answer is finished. Turn it off to get
+  the finished answer in one go.
+* **A token budget you can see**: *max new tokens* in the **sampling** panel (default **512**, the
+  code task used to stop at a hard 240 and cut pages off mid-attribute). If an answer does run into
+  the cap, the message says so instead of looking like a syntax error, and the budget is fitted to
+  the model's context window automatically.
 * **Downloads** (`⬇` in the header, `/api/downloads`): every exported model as a versioned `.zip`
-  (`sgm-1m-v1.zip`) and the desktop build (`sgm-desktop-v1.zip`, a Windows `.exe`).
+  (`sgm-1m-v2.zip`) and the desktop build (`sgm-desktop-v2.zip`, a Windows `.exe`).
 * **Desktop app** (`desktop/`): the same UI in an Electron window, packageable to a real
   `SGM.exe` — see section 10.
 
@@ -72,7 +83,10 @@ pip install -r requirements.txt   # torch CPU wheel + numpy + pillow + datasets
 ```
 
 On Windows the default PyPI `torch` wheel is the CPU build, so no extra index URL is needed.
-Windows helpers are included: `setup.cmd`, `train.cmd`, `export.cmd`, `serve.cmd`.
+Windows helpers are included: `setup.cmd`, `train.cmd`, `export.cmd`, `serve.cmd`. They call the
+interpreter as `.venv\Scripts\python.exe` directly (like `train_code.cmd` always did) — `call
+.venv\Scripts\activate` is not needed and on some machines prints *"The system cannot find the path
+specified."* without saying what is wrong.
 
 ## 2. Smoke test (2 minutes) — proves the whole pipe works
 
@@ -304,16 +318,26 @@ generation ids, and transformer logits against the int8-dequantised PyTorch mode
 ## 7. Inference
 
 **Browser (the app you deploy).** `node web/server.js` → <http://localhost:3000>. The page is a chat
-UI: the left rail holds the **model picker** (the bundle loads on your first message), the tool list
-(*Auto*, image, code, **fix an error**, ASCII → website, describe, …) and the **Gallery** button that
-opens every file the chat created, while the conversation is on the right with the composer at the
-bottom. **＋** or drag-and-drop attaches files — up to **12 per chat**, **4 MB each**, **32 MB per
+UI: the left rail holds the tool list (*Auto*, image, code, **fix an error**, ASCII → website,
+describe, …) and the **Gallery** button that opens every file the chat created, while the
+conversation is on the right with the composer at the bottom. The composer carries the **model
+selector on the right** (`◈ SGM-3M-code ▾` — it opens the model list; the bundle loads on your first
+message), the **stream on/off** toggle and the send button; the sampling panel on the left has the
+temperature/top-k/top-p/seed sliders plus **max new tokens** (default 512). **＋** or drag-and-drop
+attaches files — up to **12 per chat**, **4 MB each**, **32 MB per
 chat** including message text; when a limit is hit the **oldest file is deleted first**. A chat with
 **24 h of inactivity is cleared** (on load, and every minute while the page is open), and `☰` lists
 the recent chats. `◐` switches **dark / light** (remembered). *Auto* routes by the prompt —
-“make a snake game” → code, an error message plus an attached file → **fix**, “turn this ASCII art
-into a website” → ascii→code, otherwise an image. Messages keep their tools: *Copy*,
-*Preview as page* (sandboxed iframe), *Download PNG*.
+“make a snake game” → code, **naming a language** ("python to reverse a string") → code even without
+a verb, an error message plus an attached file → **fix**, “turn this ASCII art into a website” →
+ascii→code, “turn this website into an image preview” → code→image, otherwise an image (that table
+is in `web/code.js` and unit-tested, because getting it wrong is invisible: the wrong tool still
+answers). Messages keep their tools: *Copy*, *Preview as page* (sandboxed iframe), *Download PNG*.
+
+Two footnotes can appear under an answer, and both are there to stop the model's limits looking like
+bugs: the answer hit the token budget (raise it and ask again), or you asked for another language
+and it answered in web markup anyway (see *Honest caveats* in `RESULTS.md` — the 1M/3M bundles are
+trained mostly on html/css/js, and no prompt makes them write Python).
 
 Nothing leaves the tab: no CDN, no web fonts, no analytics, no API, no WebSocket. `web/engine.js`
 only fetches model files from the same folder the page was served from (a model download is a plain
@@ -376,6 +400,7 @@ codebase:
 
 ```
 node tools/check_ui.mjs            # markup/JS wiring, task buttons, "no external requests" promises
+node tools/check_code.mjs          # tool routing, the trained code phrasing, the language notes
 node tools/check_http.mjs          # the page, /api/models, /api/downloads, a model zip that loads
 node tools/check_web_tasks.mjs     # all 11 task paths x every bundle, through web/tasks.js
 node tools/check_gallery.mjs       # transcript -> created files (names, extensions, byte counts)
@@ -429,9 +454,17 @@ node web/cli.mjs --model web_model --task image --prompt "a white car" --out sam
   cross-check), and bundle naming/merging (1.07M params -> `SGM-1M`, a planned bundle that appears
   on disk becomes selectable).
 * `tools/check_ui.mjs` and `tools/check_desktop.mjs` cover the parts a browser would otherwise have
-  to prove: every `$('id')` in `app.js` exists, every tool button has a task entry, the page loads
+  to prove: every `$('id')` in `app.js` exists, every tool button has a task entry, the model
+  selector is inside the composer (not the rail) and opens the model list, the stream toggle and the
+  token slider are wired, your own prompt is rendered when it is sent, the page loads
   nothing from a CDN, only same-origin fetches are used, the desktop bootstrap resolves its root in
   both layouts, and `SGM.exe` is a real x86-64 PE executable when a build exists.
+* `tools/check_code.mjs` is the routing table as data: 15 prompts -> the tool they must reach (the
+  ones that used to go wrong — "python to reverse a string" landing on the image task, "turn this
+  website into an image preview" being swallowed by the code rule), plus the phrasing rewrite and
+  the language notes. `tools/shellcmd.mjs` is why the Windows build no longer dies with
+  `spawnSync npm.cmd EINVAL`: the command lines (`.cmd` shims, quoting, a checkout path with a
+  space) are built by a pure function, and `tools/check_desktop.mjs` checks them on Linux.
 
 If you change `src/tasks.py` or `src/imagecodec.py`, run both - the JS side mirrors them by hand in
 `web/tasks.js` and `web/engine.js`.
@@ -539,6 +572,7 @@ web/index.html       chat UI shell (model picker, tool rail, gallery + downloads
 web/style.css        chat UI styling + dark/light themes
 web/app.js           chat UI logic: routing, uploads, limits, themes, gallery, rendering
 web/store.js         IndexedDB chats/uploads: quota, FIFO eviction, 24 h expiry, chat titles
+web/code.js          prompt understanding: tool routing, the trained code phrasing, language notes
 web/gallery.js       transcript -> created files (names, extensions, byte counts)
 web/models.js        model registry helpers (names from parameter counts, manifest merge)
 web/models.json      the checked-in bundle list the picker reads
@@ -551,11 +585,13 @@ desktop/boot.cjs     root resolution + local server, Electron-free so it can be 
 VERSION              the release tag in every artifact name (v1, v2, ...)
 tools/check_parity.py, tools/parity_js.mjs   Python<->JS parity check
 tools/check_tasks.py   every task format builds a valid, context-sized sequence
-	ools/check_web_tasks.mjs  all 11 task paths through the real runtime, per bundle
+	ools/check_web_tasks.mjs  all 11 task paths + the budget/streaming/context guards, per bundle
 tools/check_store.mjs  the chat storage + chat-title rules
 tools/check_gallery.mjs, tools/check_zip.mjs, tools/check_models.mjs  gallery, zip, model picker
 tools/check_http.mjs   the page, the APIs and the versioned downloads (loads a downloaded zip)
 tools/check_ui.mjs     HTML/JS wiring, task buttons, no-external-request promises
+tools/check_code.mjs   the routing table, prompt phrasing and language notes (pure, no browser)
+tools/shellcmd.mjs     how the build tools are launched (npm/.cmd/EINVAL on Windows, quoting)
 tools/check_desktop.mjs  the desktop bootstrap, staged app and the built .exe
 tools/make_models_json.mjs  regenerate web/models.json from the bundles on disk
 tools/make_downloads.mjs    pre-build downloads/<name>-<release>.zip

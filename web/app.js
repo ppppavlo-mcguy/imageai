@@ -10,6 +10,7 @@ import {
 import { artifactsFromMessages, codeLang, LANG_EXT } from './gallery.js';
 import { buildZip, versionedName } from './zip.js';
 import { mergeModels, modelUrl, formatParams } from './models.js';
+import { requestedLang, codeInstruction, languageNote, routeTask } from './code.js';
 
 const $ = id => document.getElementById(id);
 const TASKS = {
@@ -31,7 +32,7 @@ const state = {
   chat: null, attachments: [], worker: null, seq: 0, theme: 'dark',
   models: [], modelId: null, release: 'v1', loadedDir: null, loadedName: null,
   loadPromise: null, loadResolve: null, loadReject: null, ready: false,
-  galleryTab: 'created', downloads: null,
+  galleryTab: 'created', downloads: null, dlTab: 'models', stream: true, pendingLang: null,
 };
 const nodes = new Map();
 
@@ -230,6 +231,41 @@ async function deleteChatAndReset() {
 function currentModel() {
   return state.models.find(m => m.id === state.modelId) || state.models.find(m => m.available) || null;
 }
+/** The one-line model readout in the composer: what will answer the next message. */
+function updateModelPill() {
+  const m = currentModel();
+  $('modelPillName').textContent = m ? m.name : 'no model';
+  $('modelPill').title = m
+    ? `${m.name} · ${formatParams(m.params)} params — click to pick another model`
+    : 'no model bundle found — click for the model list';
+}
+/** Streaming on/off: the answer is written into the bubble as the model produces it. */
+function setStream(on) {
+  state.stream = !!on;
+  remember('sgm.stream', state.stream ? '1' : '0');
+  const b = $('streamBtn');
+  b.classList.toggle('on', state.stream);
+  b.textContent = state.stream ? 'stream on' : 'stream off';
+  b.setAttribute('aria-pressed', String(state.stream));
+  b.title = state.stream
+    ? 'the answer is written into the chat while it is generated'
+    : 'wait for the whole answer, then show it at once';
+}
+/** Pick a model (the select, a row in the list and the custom-folder box all end up here). */
+function chooseModel(id) {
+  const m = state.models.find(x => x.id === id);
+  if (!m) return;
+  if (!m.available) { note(`${m.name} has not been exported yet — ${m.note || 'train and export it first'}`); return; }
+  state.modelId = id;
+  remember('sgm.model', id);
+  $('modelSelect').value = id;
+  renderModelSelect();
+  renderDlModels();
+  if (state.loadedDir !== m.url) {
+    setStatus(`will load ${m.name} on the next message`);
+    $('modelState').textContent = `${state.loadedName || 'no model'} loaded`;
+  }
+}
 function renderModelSelect() {
   const sel = $('modelSelect');
   sel.innerHTML = '';
@@ -237,6 +273,7 @@ function renderModelSelect() {
     sel.innerHTML = '<option value="">no bundles found</option>';
     $('modelNote').textContent = 'train one with train.cmd, then export.cmd';
     $('modelInfo').textContent = 'no model bundle found next to web/';
+    updateModelPill();
     return;
   }
   for (const m of state.models) {
@@ -259,6 +296,7 @@ function renderModelSelect() {
       + (m.available ? '' : '<br>this bundle has not been exported yet');
   }
   $('modelDir').value = m && m.dir ? m.dir : 'web_model';
+  updateModelPill();
   markUnsupportedTools();
 }
 /** Grey out the tools the loaded model was never trained for (nothing is hidden). */
@@ -349,15 +387,20 @@ function onWorker(ev) {
     $('progress').style.width = Math.round(100 * m.done / m.total) + '%';
     const node = nodes.get(state.seq);
     if (node && node.thinking) node.thinking.textContent = `generating… ${m.done}/${m.total} tokens`;
+  } else if (m.type === 'stream') {
+    // tokens as they are written (the "stream" toggle in the composer)
+    if (state.stream) renderStream(nodes.get(state.seq), m.text, m.tokens);
   } else if (m.type === 'result') {
     $('progressWrap').classList.add('hidden');
     $('progress').style.width = '0';
     state.busy = false;
     $('send').disabled = false;
     setStatus(`done in ${(m.ms / 1000).toFixed(1)} s`, 'ok');
+    const node = nodes.get(state.seq);
+    if (node) node.live = null;                 // the finished render replaces the live text
     const msg = resultToMessage(m);
     pushMessage(msg);
-    renderInto(nodes.get(state.seq), msg);
+    renderInto(node, msg);
     updateGalleryBadge();
   } else if (m.type === 'error') {
     $('progressWrap').classList.add('hidden');
@@ -371,6 +414,17 @@ function onWorker(ev) {
     }
     botError(nodes.get(state.seq), m.message);
   }
+}
+/** Why an answer is worth a footnote: it ran into the token cap, or it ignored the language. */
+function notesFor(m) {
+  const notes = [];
+  if (m.hitLimit) {
+    notes.push(`this answer stopped at the ${m.limit}-token limit before it was finished — raise `
+      + `"max new tokens" in the sampling panel, or ask for one smaller piece at a time`);
+  }
+  const lang = languageNote(m.text, state.pendingLang, state.loadedName || 'this bundle');
+  if (lang) notes.push(lang);
+  return notes;
 }
 function resultToMessage(m) {
   if (m.kind === 'image') {
@@ -389,7 +443,8 @@ function resultToMessage(m) {
   }
   const kind = m.kind === 'code' ? 'code' : (m.kind === 'ascii' ? 'ascii' : 'text');
   return { role: 'bot', kind, text: m.text || '', model: state.loadedName,
-           meta: { ms: m.ms, tokens: m.tokens } };
+           meta: { ms: m.ms, tokens: m.tokens, limit: m.limit || 0 },
+           notes: notesFor(m) };
 }
 
 /* --------------------------------------------------------------- rendering */
@@ -422,6 +477,20 @@ function shell(role, who) {
   return { wrap, bubble, body };
 }
 const scrollDown = () => { const m = $('messages'); m.scrollTop = m.scrollHeight; };
+
+/** Streaming: swap the "thinking" line for the text produced so far. */
+function renderStream(node, text, tokens) {
+  if (!node) return;
+  if (!node.live) {
+    node.bubble.innerHTML = '';
+    node.live = document.createElement('pre');
+    node.live.className = 'liveOut';
+    node.bubble.appendChild(node.live);
+  }
+  node.live.textContent = text || '';
+  if (node.thinking) node.thinking.textContent = `generating… ${tokens || 0} tokens`;
+  scrollDown();
+}
 
 /** The gallery file a given message became (so the download link carries the same name). */
 function artifactForMessage(msg) {
@@ -534,9 +603,21 @@ function renderInto(node, msg) {
   if (msg.meta) {
     const meta = document.createElement('div');
     meta.className = 'meta';
-    meta.textContent = `${(msg.meta.ms / 1000).toFixed(1)}s · ${msg.meta.tokens} tokens`
+    const cap = msg.meta.limit && msg.meta.tokens >= msg.meta.limit ? ' (hit the cap)' : '';
+    meta.textContent = `${(msg.meta.ms / 1000).toFixed(1)}s · ${msg.meta.tokens} tokens${cap}`
       + `${msg.model ? ' · ' + msg.model : ''}`;
     bubble.appendChild(meta);
+  }
+  if (msg.notes && msg.notes.length) {
+    const box = document.createElement('div');
+    box.className = 'notesBox';
+    for (const n of msg.notes) {
+      const p = document.createElement('p');
+      p.className = 'tiny muted noteRow';
+      p.textContent = 'ⓘ ' + n;
+      box.appendChild(p);
+    }
+    bubble.appendChild(box);
   }
   scrollDown();
   return node;
@@ -732,29 +813,77 @@ async function downloadGalleryZip() {
   setTimeout(() => { btn.disabled = false; btn.textContent = 'Download all (.zip)'; }, 1600);
 }
 
-/* --------------------------------------------------------------- downloads */
-async function openDownloads() {
-  $('dlModal').classList.remove('hidden');
-  $('dlRelease').textContent = `release ${state.release}`;
-  const body = $('dlBody');
-  body.innerHTML = '<p class="tiny muted">checking what is available…</p>';
-  let data = null;
-  try {
-    const r = await fetch('/api/downloads', { cache: 'no-store' });
-    if (r.ok) data = await r.json();
-  } catch { /* static host */ }
-  state.downloads = data;
-  body.innerHTML = '';
+/* --------------------------------------------------- models + downloads panel */
+const tag = text => Object.assign(document.createElement('span'), { className: 'tag', textContent: text });
+
+/** The panel the composer's model selector opens: pick a model, or take one home. */
+function showDlTab(tab) {
+  state.dlTab = tab === 'app' ? 'app' : 'models';
+  for (const b of $('dlTabs').querySelectorAll('button')) {
+    b.classList.toggle('active', b.dataset.tab === state.dlTab);
+  }
+  $('dlModels').classList.toggle('hidden', state.dlTab !== 'models');
+  $('dlApp').classList.toggle('hidden', state.dlTab !== 'app');
+}
+
+/** One row per bundle: click it to use it, or download the zip from the same place. */
+function renderDlModels() {
+  const box = $('dlModelRows');
+  box.innerHTML = '';
+  if (!state.models.length) {
+    box.innerHTML = '<p class="tiny muted">no bundles found — train one with train.cmd, then export.cmd</p>';
+    return;
+  }
+  const zips = new Map(((state.downloads && state.downloads.models) || []).map(m => [m.id, m]));
+  for (const m of state.models) {
+    const row = document.createElement('div');
+    row.className = 'dlRow' + (m.available ? ' pick' : '') + (m.id === state.modelId ? ' selected' : '');
+    const label = document.createElement('div');
+    label.innerHTML = `<b>${escapeHtml(m.name)}</b><br><span class="tiny muted">${m.available
+      ? `${formatParams(m.params)} params · ${(m.bytes / 1048576).toFixed(2)} MiB · `
+        + escapeHtml((m.tasks || []).join(' / ') || 'tasks unknown')
+      : escapeHtml(m.note || 'not exported yet')}</span>`;
+    row.appendChild(label);
+    const spacer = document.createElement('span');
+    spacer.className = 'spacer';
+    row.appendChild(spacer);
+    const zip = zips.get(m.id);
+    if (zip) {
+      const a = document.createElement('a');
+      a.className = 'button secondary';
+      a.href = zip.url;
+      a.textContent = `⬇ ${zip.file}`;
+      row.appendChild(a);
+    }
+    if (m.available) {
+      if (m.id === state.modelId) row.appendChild(tag('in use'));
+      else {
+        const use = document.createElement('button');
+        use.className = 'ghost';
+        use.textContent = 'use';
+        use.onclick = () => chooseModel(m.id);
+        row.appendChild(use);
+        row.onclick = e => { if (!e.target.closest('a,button')) chooseModel(m.id); };
+      }
+    }
+    box.appendChild(row);
+  }
+}
+
+function renderDlApp() {
+  const box = $('dlAppRows');
+  const data = state.downloads;
+  box.innerHTML = '';
   if (!data) {
-    body.innerHTML = '<p class="tiny muted">the download API is served by <code>node web/server.js</code>. '
-      + 'On a static host, fetch the zips from <code>/downloads/</code> after running '
+    box.innerHTML = '<p class="tiny muted">the download API is served by <code>node web/server.js</code>. '
+      + 'On a static host, fetch the files from <code>/downloads/</code> after running '
       + '<code>node tools/make_downloads.mjs</code>.</p>';
     return;
   }
   const app = document.createElement('div');
   app.className = 'dlRow';
   app.innerHTML = `<b>SGM desktop app</b><span class="tiny muted">${
-    data.app ? `${(data.app.bytes / 1048576).toFixed(1)} MB · ${data.app.name}` : 'not compiled yet'
+    data.app ? `${(data.app.bytes / 1048576).toFixed(1)} MB · ${escapeHtml(data.app.name)}` : 'not compiled yet'
   }</span><span class="spacer"></span>`;
   if (data.app) {
     const a = document.createElement('a');
@@ -768,26 +897,38 @@ async function openDownloads() {
     hint.textContent = 'build it with: ' + (data.buildApp || 'node tools/build_desktop.mjs');
     app.appendChild(hint);
   }
-  body.appendChild(app);
+  box.appendChild(app);
+  const note = document.createElement('p');
+  note.className = 'tiny muted';
+  note.textContent = 'the window and this page are the same UI: the app serves web/ itself, so it '
+    + 'generates in the same tab with no server and no network.';
+  box.appendChild(note);
+}
 
-  const head = document.createElement('p');
-  head.className = 'tiny muted';
-  head.style.margin = '6px 0 0';
-  head.textContent = 'model bundles (.zip) — unzip, drop the folder next to web/, then pick it in the model box';
-  body.appendChild(head);
-  for (const m of data.models || []) {
-    const row = document.createElement('div');
-    row.className = 'dlRow';
-    row.innerHTML = `<b>${escapeHtml(m.name)}</b>`
-      + `<span class="tiny muted">${(m.bytes / 1048576).toFixed(2)} MiB · ${escapeHtml(m.dir)}</span>`
-      + `<span class="spacer"></span>`;
-    const a = document.createElement('a');
-    a.className = 'button secondary';
-    a.href = m.url;
-    a.textContent = `download ${m.file}`;
-    row.appendChild(a);
-    body.appendChild(row);
+async function openDownloads(tab = state.dlTab) {
+  $('dlModal').classList.remove('hidden');
+  showDlTab(tab);
+  $('dlRelease').textContent = `release ${state.release}`;
+  renderDlModels();
+  renderDlApp();
+  $('dlAppRows').innerHTML = '<p class="tiny muted">checking what is available…</p>';
+  $('dlModelsNote').textContent = 'checking what can be downloaded…';
+  let data = null;
+  try {
+    const r = await fetch('/api/downloads', { cache: 'no-store' });
+    if (r.ok) data = await r.json();
+  } catch { /* static host without the bundled server */ }
+  if (data) {
+    state.downloads = data;
+    $('dlRelease').textContent = `release ${data.release || state.release}`;
   }
+  renderDlModels();
+  renderDlApp();
+  $('dlModelsNote').textContent = state.downloads
+    ? 'unzip a bundle next to web/, pick it here, then reload the page — the model itself never '
+      + 'leaves your machine.'
+    : 'the zips are served by node web/server.js; on a static host use /downloads/ after running '
+      + 'node tools/make_downloads.mjs';
 }
 
 /* ------------------------------------------------------------- task + send */
@@ -804,19 +945,13 @@ function selectTask(task) {
     ex.appendChild(b);
   }
 }
-function alertWords(t) { return /error|traceback|exception|fails?|broken|not work|crash|bug/.test(t); }
+/** "auto" is decided in web/code.js so tools/check_code.mjs can test the routing table. */
 function route(text) {
-  if (state.task !== 'auto') return state.task;
-  const t = text.toLowerCase();
-  const hasText = state.attachments.some(f => f.text);
-  const hasImage = state.attachments.some(f => f.blob && /^image\//.test(f.type));
-  if (alertWords(t) && (hasText || /code|function|def |import |<|>|\{|\}/.test(text))) return 'fix';
-  if (hasImage) return /ascii|text art/.test(t) ? 'ascii' : /website|html|page|build/.test(t) ? 'img2code' : 'caption';
-  if (/ascii art|ascii/.test(t) && /turn|convert|into|website|page|html/.test(t)) return 'ascii2code';
-  if (/^(make|write|build|create|code|give me|generate).*(snake|game|app|page|html|css|javascript|js|python|function|script|website|site)/.test(t)) return 'code';
-  if (/preview image|image preview|render.*image/.test(t)) return 'code2img';
-  if (/continue|story|poem|paragraph|essay/.test(t)) return 'text';
-  return 'image';
+  return routeTask(text, {
+    task: state.task,
+    hasText: state.attachments.some(f => f.text),
+    hasImage: state.attachments.some(f => f.blob && /^image\//.test(f.type)),
+  });
 }
 function autosize() {
   const p = $('prompt');
@@ -838,7 +973,13 @@ async function send() {
   autosize();
   state.busy = true;
   $('send').disabled = true;
-  pushMessage({ role: 'user', kind: 'text', text, files: fileNames });
+  // the prompt is on screen the moment it is sent (it used to only appear after a reload)
+  const userMsg = { role: 'user', kind: 'text', text, files: fileNames };
+  pushMessage(userMsg);
+  renderInto(null, userMsg);
+  // only the code-shaped tasks can answer in the "wrong" language
+  state.pendingLang = ['code', 'fix', 'ascii2code', 'img2code'].includes(task)
+    ? requestedLang(text) : null;
 
   const node = shell('bot', 'SGM');
   $('messages').appendChild(node.wrap);
@@ -882,8 +1023,10 @@ async function send() {
     const fromFile = (attached.match(/^.*(error|exception|traceback|undefined|null)[^\n]*$/im) || [])[0];
     error = (fromText ? fromText[1] : fromFile || text || 'unknown error').trim().slice(0, 200);
     prompt = '';
-  } else if (task === 'code' && !/^(make|write|build|create|generate|code|can you|please|give)/i.test(text)) {
-    prompt = 'write code for ' + text;
+  } else if (task === 'code') {
+    // "python to reverse a string" -> "write python for reverse a string": the phrasing the code
+    // task was trained on, with the language in the position the model learned to read it in.
+    prompt = codeInstruction(text);
   } else if (task === 'img2code' && !/website|html|page/i.test(text)) {
     prompt = 'build a web page that looks like this';
   }
@@ -902,6 +1045,8 @@ async function send() {
     error, question, rgba, width,
     temp: parseFloat($('temp').value), topK: parseInt($('topk').value),
     topP: parseFloat($('topP').value), seed: parseInt($('seed').value) || 0,
+    maxNew: parseInt($('maxNew').value, 10) || 512,
+    stream: state.stream,
   });
 }
 
@@ -946,7 +1091,10 @@ $('galleryModal').addEventListener('click', e => { if (e.target.id === 'galleryM
 document.querySelectorAll('#galleryModal .tabs button').forEach(b => {
   b.onclick = () => { state.galleryTab = b.dataset.tab; renderGallery(); };
 });
-$('dlBtn').onclick = openDownloads;
+$('dlBtn').onclick = () => openDownloads();
+$('modelPill').onclick = () => openDownloads('models');
+$('streamBtn').onclick = () => setStream(!state.stream);
+for (const b of $('dlTabs').querySelectorAll('button')) b.onclick = () => showDlTab(b.dataset.tab);
 $('dlClose').onclick = () => $('dlModal').classList.add('hidden');
 $('dlModal').addEventListener('click', e => { if (e.target.id === 'dlModal') $('dlModal').classList.add('hidden'); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeGallery(); $('dlModal').classList.add('hidden'); } });
@@ -967,21 +1115,12 @@ $('loadDir').onclick = async () => {
   renderModelSelect();
   try { await ensureModel(); } catch (e) { note(`could not load ${dir}: ${e.message}`); }
 };
-$('modelSelect').onchange = () => {
-  state.modelId = $('modelSelect').value;
-  remember('sgm.model', state.modelId);
-  const m = currentModel();
-  renderModelSelect();
-  if (m && state.loadedDir !== m.url) {
-    setStatus(`will load ${m.name} on the next message`);
-    $('modelState').textContent = `${state.loadedName || 'no model'} loaded`;
-  }
-};
+$('modelSelect').onchange = () => chooseModel($('modelSelect').value);
 $('pick').onclick = () => $('files').click();
 $('files').addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; });
 
-const fmt = (id, v) => { $(id).textContent = /topk/.test(id) ? String(parseInt(v)) : parseFloat(v).toFixed(2); };
-for (const [id, out] of [['temp', 'tempV'], ['topk', 'topkV'], ['topP', 'topPV']]) {
+const fmt = (id, v) => { $(id).textContent = /topk|maxNew/.test(id) ? String(parseInt(v, 10)) : parseFloat(v).toFixed(2); };
+for (const [id, out] of [['temp', 'tempV'], ['topk', 'topkV'], ['topP', 'topPV'], ['maxNew', 'maxNewV']]) {
   $(id).addEventListener('input', () => fmt(out, $(id).value));
   fmt(out, $(id).value);
 }
@@ -998,6 +1137,7 @@ chat.addEventListener('drop', e => { if (e.dataTransfer.files.length) addFiles(e
 /* ----------------------------------------------------------------- boot up */
 async function boot() {
   applyTheme(recall('sgm.theme') === 'light' ? 'light' : 'dark');
+  setStream(recall('sgm.stream') !== '0');
 
   try {
     const swept = await sweepExpired();
@@ -1034,5 +1174,6 @@ boot();
 // Handy in the console / for the headless smoke test in tools/check_ui.mjs
 window.SGM = {
   state, ensureModel, refreshModels, openGallery, openDownloads, artifacts: chatArtifacts,
-  mergeModels, modelUrl, titleForPrompt,
+  mergeModels, modelUrl, titleForPrompt, setStream, chooseModel, codeInstruction, requestedLang,
+  routeTask, route: text => route(text),
 };

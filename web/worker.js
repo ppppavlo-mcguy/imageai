@@ -5,6 +5,8 @@ import { runTask } from './tasks.js';
 
 let engine = null;
 let loaded = { dir: null, name: null, id: null };
+// only these answer in text; the image tasks would stream raw image codes into the bubble
+const TEXT_TASKS = new Set(['code', 'fix', 'ascii2code', 'img2code', 'caption', 'ascii', 'text']);
 
 self.onmessage = async (ev) => {
   const msg = ev.data;
@@ -33,9 +35,16 @@ self.onmessage = async (ev) => {
         width: msg.width, maxNew: msg.maxNew, temp: msg.temp, topK: msg.topK, topP: msg.topP, seed: msg.seed,
         ascii: msg.ascii || null, code: msg.code || null,
         error: msg.error || null, question: msg.question || null,
-        onProgress: p => self.postMessage({ type: 'progress', done: p.done, total: p.total }),
+        onProgress: p => {
+          self.postMessage({ type: 'progress', done: p.done, total: p.total });
+          // streaming: the tokens so far, decoded, so the bubble fills in while it writes
+          if (msg.stream && TEXT_TASKS.has(msg.task) && p.ids && p.ids.length) {
+            self.postMessage({ type: 'stream', text: engine.tok.decode(p.ids), tokens: p.ids.length });
+          }
+        },
       });
       const payload = { type: 'result', kind: res.kind, text: res.text || '', tokens: res.ids.length,
+                        limit: res.limit || 0, hitLimit: !!res.hitLimit, stopped: !!res.stopped,
                         ms: performance.now() - t0, model: loaded.name };
       if (res.kind === 'image') {
         payload.rgba = res.rgba.buffer;

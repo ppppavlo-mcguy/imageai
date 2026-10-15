@@ -15,6 +15,7 @@ import { createRequire } from 'node:module';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { PROJECT_ROOT } from '../web/server.js';
+import { npmCommand, packagerCommand, packagerPath, commandLine, quoteArg } from './shellcmd.mjs';
 
 const require = createRequire(import.meta.url);
 const { resolveRoot, readVersion, startLocalServer } = require('../desktop/boot.cjs');
@@ -54,10 +55,33 @@ check('a folder without web/ is refused', (() => {
   started.server.close();
 }
 
+/* ------------------------------- the build commands (the Windows EINVAL fix) ---------------- */
+check('npm is spelled per platform',
+  npmCommand('win32') === 'npm.cmd' && npmCommand('linux') === 'npm' && npmCommand('darwin') === 'npm');
+check('the packager is named relative to desktop/ (no spaces from the checkout path)',
+  packagerCommand('win32') === 'node_modules\\.bin\\electron-packager.cmd'
+  && packagerCommand('linux') === './node_modules/.bin/electron-packager'
+  && packagerPath('/x/desktop', 'win32').includes('electron-packager.cmd'),
+  packagerCommand('win32'));
+check('arguments with spaces are quoted for the shell',
+  quoteArg('--app-copyright=SGM (v1)') === '"--app-copyright=SGM (v1)"'
+  && quoteArg('--arch=x64') === '--arch=x64',
+  quoteArg('--app-copyright=SGM (v1)'));
+const winLine = commandLine('npm.cmd', ['install', '--save-dev', 'electron', '@electron/packager']);
+check('the install line is a single shell command (execSync, not execFile)',
+  winLine === 'npm.cmd install --save-dev electron @electron/packager', winLine);
+const packLine = commandLine(packagerCommand('win32'), ['/C/My Projects/stage', 'SGM', '--platform=win32']);
+check('a staged path with a space survives the quoting',
+  packLine.startsWith('node_modules\\.bin\\electron-packager.cmd "/C/My Projects/stage" SGM'), packLine);
+check('build_desktop.mjs really uses the helper (no raw execFile left)',
+  !/execFileSync/.test(readFileSync(join(root, 'tools', 'build_desktop.mjs'), 'utf8'))
+  && /runInShell\(npmCommand\(\)/.test(readFileSync(join(root, 'tools', 'build_desktop.mjs'), 'utf8')));
+
 /* --------------------------------------------------------- the packaged layout */
 if (existsSync(stage)) {
   const needed = ['main.cjs', 'boot.cjs', 'package.json', 'VERSION', 'web/index.html', 'web/app.js',
-                  'web/server.js', 'web/models.json', 'web/zip.js', 'web/gallery.js', 'web/models.js'];
+                  'web/server.js', 'web/models.json', 'web/zip.js', 'web/gallery.js', 'web/models.js',
+                  'web/code.js'];
   const missing = needed.filter(f => !existsSync(join(stage, f)));
   check('the staged app carries every file the exe needs', missing.length === 0, missing.join(', ') || 'all present');
   const bundles = readdirSync(stage).filter(n => /^web_model|^models$/.test(n));

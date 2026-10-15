@@ -10,9 +10,13 @@
  */
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { autoName, slugify } from '../web/models.js';
+import { readRelease } from '../web/server.js';
 
-const root = resolve(new URL('..', import.meta.url).pathname);
+// fileURLToPath, not URL.pathname: on Windows the latter is "/D:/dir", so resolve() would build
+// "D:\\D:\\dir" and readFileSync would fail with ENOENT.
+const root = resolve(fileURLToPath(new URL('..', import.meta.url)));
 const MANIFEST = join(root, 'web', 'models.json');
 const SKIP = new Set(['node_modules', '.venv', '.git', 'desktop', 'downloads']);
 
@@ -89,8 +93,10 @@ for (const prev of previous.models || []) {
   models.push({ ...prev, dir, planned: true });        // declared but not trained/exported yet
 }
 
-const out = { version: 1, release: previous.release || 'v1', default: previous.default || models[0]?.id || null,
-              models };
+// the release comes from ./VERSION (v1, v2, ...), so bumping the file moves the manifest and every
+// generated artifact together instead of leaving a stale tag in here.
+const out = { version: 1, release: await readRelease(root),
+              default: previous.default || models[0]?.id || null, models };
 const json = JSON.stringify(out, null, 2) + '\n';
 
 if (process.argv.includes('--check')) {

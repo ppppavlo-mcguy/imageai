@@ -7,20 +7,22 @@ names (`src/`, `web/`, `desktop/`, `models/`).
 
 Two extra top-level things matter now:
 
-* `VERSION` — the release tag (`v1`) in **every** published file name: `sgm-1m-v1.zip`,
-  `sgm-desktop-v1.zip`, `sgm-v1.zip`. Bump it to `v2` for the next round of artifacts.
+* `VERSION` — the release tag (`v2`) in **every** published file name: `sgm-1m-v2.zip`,
+  `sgm-desktop-v2.zip`, `sgm-v2.zip`. Bump it for the next round of artifacts; nothing else needs
+  editing (`web/models.json` is regenerated from it).
 * `downloads/` — build output (`node tools/make_downloads.mjs`, `node tools/build_desktop.mjs`); the
   server serves that folder and the UI lists it under **Downloads**. It is git-ignored.
 
 ---
 
-## 1. Inference set (run the web app) — 12 web files + one model folder
+## 1. Inference set (run the web app) — 13 web files + one model folder
 
 ```
-web/index.html          chat UI shell: model picker, tool rail, gallery + downloads modals, composer
+web/index.html          chat UI shell: model pill, tool rail, model/downloads panel, gallery, composer
 web/style.css           dark + light themes (CSS variables, no external fonts)
-web/app.js              chat logic: routing, uploads, limits, themes, models, gallery, rendering
+web/app.js              chat logic: routing, uploads, limits, themes, models, gallery, streaming
 web/store.js            IndexedDB chats/uploads: 32 MB + 12 files per chat, FIFO eviction, 24 h expiry
+web/code.js             prompt understanding: tool routing, the trained code phrasing, language notes
 web/gallery.js          transcript -> created files (names, extensions, byte counts)
 web/models.js           model registry helpers (names from parameter counts, manifest merge)
 web/models.json         the checked-in bundle list the picker reads
@@ -102,7 +104,9 @@ train_ui.cmd                      multi-modal run (--mix multi)
 train_10m.cmd / export_10m.cmd    SGM-10M preset (embed 320, 6 layers) + its export
 train_100m.cmd / export_100m.cmd  SGM-100M preset (embed 768, 12 layers) + its export
 tools/check_tasks.py              every task format builds a valid, context-sized sequence
-tools/check_web_tasks.mjs         all 11 task paths through the real runtime, per bundle
+tools/check_web_tasks.mjs         all 11 task paths + budget/streaming/context guards, per bundle
+tools/check_code.mjs              routing table, code phrasing and language notes (pure)
+tools/shellcmd.mjs                the build command lines (npm/.cmd/EINVAL on Windows, quoting)
 tools/check_store.mjs             the 32 MB / 12 file / FIFO / 24 h rules and chat titles
 tools/check_gallery.mjs           transcript -> files (names, extensions, bytes)
 tools/check_zip.mjs               zip round-trip (+ Python zipfile cross-check)
@@ -121,7 +125,32 @@ calculator, image-preview, Python and error-fix examples).
 
 ## 4. Files changed (the log you asked for)
 
-Latest pass — **SGM rename, model picker, gallery, downloads, desktop app, named chats**:
+Latest pass — **model selector in the composer, streaming, the 240-token cap, language handling, and
+three build bugs**:
+
+| file | what changed |
+|---|---|
+| `web/index.html` | the model card left the rail: the composer's right side now carries the **model pill** (`#modelPill` opens the model list), the **stream on/off** toggle and the send button; the model `<select>`, *Load now*, the custom-folder box and the downloads rows moved into the **Models & downloads** panel, which got `models` / `desktop app` tabs. The sampling panel gained **max new tokens** |
+| `web/style.css` | model pill, stream toggle, selectable model rows, panel sections, the streaming caret |
+| `web/app.js` | renders **your own prompt** as soon as it is sent (it used to appear only after a reload); `chooseModel` (select, list row, custom folder); `openDownloads(tab)`/`showDlTab`/`renderDlModels`/`renderDlApp`; streaming (`renderStream`, `setStream`); `maxNew` from the slider; a note under an answer that hit the cap or ignored the language; `route()` moved to `web/code.js` |
+| `web/code.js` | **new**: `requestedLang`, `topicOf`, `codeInstruction` ("python to reverse a string" -> "write python for reverse a string", the phrasing the code task was trained on), `looksLikeLang`, `languageNote`, `routeTask`, `alertWords` |
+| `web/engine.js` | `onProgress` now hands over the tokens produced so far (**streaming**) and the token budget is clamped to the context window, so a long prompt gets a readable error instead of `context length exceeded` mid-answer |
+| `web/tasks.js` | code/fix/ascii2code/img2code budget 240/260 -> `DEFAULT_CODE_TOKENS = 512`; every text answer reports `limit`/`stopped`/`hitLimit` |
+| `web/worker.js` | forwards `{type:'stream'}` token text while generating (text tasks only) and passes the limit/hitLimit through to the UI |
+| `web/models.json` | regenerated; `release` now follows `VERSION` (`v2`) |
+| `tools/make_models_json.mjs` | **bug**: `resolve(new URL('..', import.meta.url).pathname)` built `D:\D:\...` on Windows (that is the `ENOENT` after `export_10m.cmd`); it uses `fileURLToPath` now, and reads the release from `VERSION` |
+| `tools/build_desktop.mjs` | **bug**: `execFileSync('npm.cmd', ...)` is `EINVAL` on Windows since Node 18.20/20.12 (the CVE-2024-27980 fix). It goes through `tools/shellcmd.mjs` (a shell command line) now, and names electron-packager relative to `desktop/` so a checkout path with spaces cannot break it |
+| `tools/shellcmd.mjs` | **new**: `npmCommand`/`packagerCommand`/`quoteArg`/`commandLine`/`runInShell` - the pure part is unit-tested on Linux |
+| `tools/check_code.mjs` | **new (17 + 16 checks)**: the routing table (including the two prompts that used to route wrong), the phrasing rewrite, the language matcher |
+| `tools/check_ui.mjs` | + 7 checks: selector position, model list, streaming toggle, token slider, the prompt being rendered |
+| `tools/check_web_tasks.mjs` | + 6 checks: the 512 default, a small budget honoured, `hitLimit`, streamed tokens, the context guard |
+| `tools/check_desktop.mjs` | + 5 checks: the platform command names, quoting, the single-line install command, no `execFileSync` left; `web/code.js` added to the staged-app list |
+| `setup.cmd`, `train.cmd`, `export.cmd`, `train_code.cmd`, `train_ui.cmd`, `train_10m.cmd`, `export_10m.cmd`, `train_100m.cmd`, `export_100m.cmd` | call `.venv\Scripts\python.exe` directly instead of `call .venv\Scripts\activate` (the *"system cannot find the path specified"* before the export ran), `cd /d "%~dp0"`, and a clear message when the venv or the checkpoint is missing |
+| `VERSION` | `v1` -> **`v2`** (new artifacts: `sgm-1m-v2.zip`, `sgm-desktop-v2.zip`, `sgm-v2.zip`) |
+| `package.json` | `npm test` includes `test:code` |
+| `README.md`, `RESULTS.md`, `FILES.md` | this pass documented |
+
+Earlier pass — **SGM rename, model picker, gallery, downloads, desktop app, named chats**:
 
 | file | lines before → after | what changed |
 |---|---|---|
@@ -147,7 +176,7 @@ Latest pass — **SGM rename, model picker, gallery, downloads, desktop app, nam
 | `tools/check_store.mjs` | 65 → 86 | + chat-title rules |
 | `src/model.py` | 200 → 204 | + `10m` / `100m` presets (the sizes the picker offers) |
 | `src/export_web.py` | 263 → 271 | + `--name sgm-10m` → `models/sgm-10m`, and the manifest reminder |
-| `VERSION` | new | release tag `v1` used in every artifact name |
+| `VERSION` | new | release tag used in every artifact name |
 | `.gitignore` | updated | ignores `downloads/`, `desktop/dist/`, `desktop/build/` |
 | `README.md`, `RESULTS.md`, `FILES.md` | updated | this pass documented (new sections 8 and 10, SGM naming) |
 
@@ -193,7 +222,7 @@ train_10m.cmd
 export_10m.cmd                             :: -> models\sgm-10m, picker shows SGM-10M
 
 :: checks (no browser needed)
-node tools\check_ui.mjs && node tools\check_http.mjs && node tools\check_web_tasks.mjs
+node tools\check_ui.mjs && node tools\check_code.mjs && node tools\check_http.mjs && node tools\check_web_tasks.mjs
 node tools\check_gallery.mjs && node tools\check_zip.mjs && node tools\check_models.mjs
 node tools\check_desktop.mjs
 .venv\Scripts\python.exe tools\check_tasks.py --mix multi
@@ -202,5 +231,5 @@ node tools\check_desktop.mjs
 npm test
 ```
 
-Switch the model in the rail's picker (or the `custom folder` box) to run
+Switch the model in the composer's model list (or the `custom folder` box inside it) to run
 `web_model_code` / `models\sgm-10m` instead of `web_model`.

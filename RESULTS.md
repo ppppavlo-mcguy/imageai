@@ -259,3 +259,101 @@ model zip round-trip        the downloaded weights generate the same 65 tokens a
   `node tools/build_desktop.mjs` recreates it, and `downloads/` is what the server offers.
 * The shipped bundles still predate the `fix` task (`SGM-1M`, `SGM-3M-code`) as described above, and
   the pure-code run is still the 16-minute one.
+
+## SGM pass 4: the selector in the composer, streaming, the 240-token cap, and three build bugs
+
+The four things asked for, plus everything that turned up while testing them. No model was retrained
+and no tensor changed: `web/engine.js` and `web/tasks.js` keep the same maths, so every number above
+still describes the shipped bundles.
+
+### What changed
+
+* **The model selector moved into the composer, on the right.** The pill (`◈ SGM-3M-code ▾`) next to
+  the send button shows which bundle will answer; clicking it opens the **Models & downloads** panel
+  with the *models* tab selected, where every bundle is a row: name, parameters, size, tasks, a
+  *use* button and its own `.zip` download. The `<select>`, *Load now* and the custom-folder box live
+  in that panel now; the rail keeps the tool list, the sampling sliders and the storage meter.
+* **Text streaming, toggleable.** `stream on/off` sits in the composer (remembered in
+  `localStorage`). On, the worker posts the tokens produced so far (`web/engine.js` hands the live
+  id array to `onProgress`, `web/worker.js` decodes and forwards it) and the answer is written into
+  the bubble as it is generated; off, the finished answer appears in one go as before.
+* **The 240-token wall is gone.** `DEFAULT_CODE_TOKENS = 512` for code/fix/ascii2code/img2code (it
+  used to be 240/260 - the reason a page arrived cut off in the middle of an attribute, which reads
+  as a syntax error but is a budget), *max new tokens* is a slider (64–1024) in the **sampling**
+  panel, and the budget is clamped to the model's context window with a readable error instead of
+  `context length exceeded`. An answer that still runs into the cap says so under the message.
+* **Your prompt is shown when you send it.** It only appeared in the chat after a reload before -
+  `send()` pushed it to IndexedDB but never rendered it.
+* **Asking for another language is handled honestly.** `web/code.js` recognises the language in the
+  prompt, rewrites the instruction into the phrasing the code task was trained on
+  (`python to reverse a string` -> `write python for reverse a string`, and `make a snake game` ->
+  `write html for a snake game`), and when the answer still comes back as web markup it says so
+  under the answer. Measured: for `SGM-3M-code`, **every one of seven prompts asking for python
+  (and one asking for javascript) came back as html**, with and without the rewrite - the bundle has
+  seen Python only in a small slice of its data (`synth.py` variant 12, the error cases and
+  `data/seed_code`), so this is a training-data fact, not a prompt bug. The note names the fix.
+* **Tool routing is data now.** `routeTask` in `web/code.js` holds the order, and two prompts that
+  used to route wrong are pinned in `tools/check_code.mjs`: *"python to reverse a string"* went to
+  **image** (no verb for the old regex to match - it is **code** now), and *"turn this website into
+  an image preview"* would have been swallowed by the new language rule if it had been placed
+  before the code→image rule.
+* **Three build bugs from the user's run.**
+  1. `node tools/make_models_json.mjs` built its root with `resolve(new URL('..', import.meta.url)
+     .pathname)` - on Windows that is `D:\D:\MINE\IMAGES`, so the run after `export_10m.cmd` died
+     with `ENOENT ... 'D:\D:\MINE\IMAGES\web\models.json'` even though the file was right there
+     (`fileURLToPath` now). The release tag it writes comes from `VERSION` too.
+  2. `node tools/build_desktop.mjs` died with `spawnSync npm.cmd EINVAL`, the CVE-2024-27980 change
+     in Node 18.20/20.12/21.7: `execFile` refuses to launch a `.cmd` shim without a shell. It now
+     runs its tools through a shell command line built by `tools/shellcmd.mjs`, and names
+     electron-packager relative to `desktop/` so a checkout path with a space cannot break it.
+  3. `export_10m.cmd` printed *"The system cannot find the path specified."* before doing anything.
+     That message can only come from the shell, and the only thing before the export was
+     `call .venv\Scripts\activate`; the scripts now call `.venv\Scripts\python.exe` directly, which
+     is what `train_code.cmd`/`train_ui.cmd` always did, `cd /d "%~dp0"` first, and say which file is
+     missing instead of failing silently.
+
+### Verification (this build, release `v2`)
+
+```
+node tools/check_ui.mjs           UI OK          25 checks (66 ids, selector in the composer, stream + token slider wired)
+node tools/check_code.mjs         CODE OK        33 checks (16 routing prompts, phrasing, language notes)
+node tools/check_http.mjs         HTTP OK        30 checks (21 routes + a downloaded zip that generates identically)
+node tools/check_web_tasks.mjs    WEB TASKS OK   60 checks (11 task paths x 3 bundles + 12 budget/stream/guard checks)
+node tools/check_gallery.mjs      GALLERY OK     18 checks
+node tools/check_zip.mjs          ZIP OK         10 checks, archive read back by Python's zipfile
+node tools/check_models.mjs       MODELS OK      18 checks
+node tools/check_store.mjs        STORE OK       21 checks
+node tools/check_desktop.mjs      DESKTOP OK     20 checks incl. the Windows command line and a real PE file
+python tools/check_tasks.py --mix multi|code|image|all    TASKS OK x4, 10 kinds
+python tools/check_parity.py web_model/tokenizer.json web_model
+                                  PARITY OK      9 formats, greedy + forward, |dlogit| 0.00001
+node tools/check_http_load.mjs    identical to the files on disk: 3/3 prompts
+```
+
+Measured in this pass:
+
+```
+streaming            7 updates at 1->9->17->25->33->41->48 tokens, final text identical to the answer
+token budget         16/16 tokens at maxNew=16, hitLimit=true, and total in progress == adjusted budget
+context guard        "the prompt is 4810 tokens, more than this model can read (1024)" instead of a crash
+SGM-1M (web_model)   1,069,920 params   1.02 MiB int8 -> 0.88 MiB zip (sgm-1m-v2.zip)
+SGM-3M-code          3,271,520 params   3.12 MiB int8 -> 2.77 MiB zip
+SGM-1M-int4          0.54 MiB int4      -> 0.35 MiB zip
+sgm-desktop-v2.zip   161.4 MiB          SGM.exe = PE32+ (GUI) x86-64, restaged with the new web/ files
+sgm-v2.zip           235 files, 8.65 MiB  (replaces sgm-v1.zip; downloads/ names moved to v2)
+```
+
+### Honest caveats
+
+* **No browser or display here**, so the streaming caret, the model pill, the panel tabs and the
+  token slider are verified statically (`tools/check_ui.mjs` reads the markup and the driver) and the
+  worker protocol is verified through the real `web/tasks.js` (`tools/check_web_tasks.mjs`), not by
+  clicking. Typing in the box on the preview is still yours to do.
+* **The Windows-specific code path cannot be executed on Linux.** What is tested is the thing that
+  broke: the command line is built by a pure function (`tools/shellcmd.mjs`) and
+  `tools/check_desktop.mjs` asserts the `.cmd` names, the quoting of a path with a space and that
+  `execFileSync` is gone - but the real `npm.cmd` launch happens on your machine.
+* **No bundle writes Python.** The language rewrite and the note are the honest maximum without
+  retraining: `train_code.cmd` already mixes Python in, so a bigger run is the real fix.
+* Where the numbers above say "3 bundles", that is what is exported here: `SGM-10M` / `SGM-100M`
+  remain *planned* in the picker until a real run produces them.

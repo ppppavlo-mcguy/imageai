@@ -13,3 +13,7 @@ desktop/dist/
 desktop/build/
 
 logs/preview.log
+logs/sgm-server.log
+logs/sgm-server.pid
+logs/build-desktop.log
+logs/pip-*.log
